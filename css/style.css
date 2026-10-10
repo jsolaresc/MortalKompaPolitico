@@ -87,16 +87,11 @@ canvas#game {
   #share button, #share .btn { padding: 7px 10px; font-size: 13px; }
 }
 
-#rotate {
-  position: fixed;
-  inset: 0;
-  display: none;
-  align-items: center;
-  justify-content: center;
-  text-align: center;
-  background: #0b0b10;
-  color: #f0c828;
-  font-size: 26px;
-  z-index: 10;
-  line-height: 1.6;
+body.portrait #share {
+  top: auto;
+  bottom: 3%;
+  left: 4%;
+  right: 4%;
+  width: auto;
+  font-size: 16px;
 }

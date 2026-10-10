@@ -64,36 +64,48 @@ function resize() {
   const W = window.innerWidth, H = window.innerHeight;
   const dpr = Math.min(window.devicePixelRatio || 1, 2);
   const aspect = W / H;
-  let vw = C.BASE_W, scale;
-  if (aspect >= C.BASE_W / C.BASE_H) {
+  const v = app.view;
+  // Celular en vertical: el juego va arriba (16:9 a todo el ancho) y
+  // los controles táctiles en la zona de abajo -- no hace falta girarlo.
+  v.portrait = app.isTouchDevice && aspect < 1;
+  let vw = C.BASE_W, scale, fullH = C.BASE_H, oy = 0;
+  if (v.portrait) {
+    scale = W / C.BASE_W;
+    fullH = H / scale;
+    oy = Math.max(20, Math.min(160, (fullH - C.BASE_H) * 0.12));
+  } else if (aspect >= C.BASE_W / C.BASE_H) {
     scale = H / C.BASE_H;
     vw = Math.min(W / scale, C.BASE_H * 2.4);
   } else {
     scale = W / C.BASE_W;
   }
-  const cssW = vw * scale, cssH = C.BASE_H * scale;
+  const cssW = vw * scale, cssH = fullH * scale;
   canvas.style.width = `${cssW}px`;
   canvas.style.height = `${cssH}px`;
   canvas.width = Math.round(cssW * dpr);
   canvas.height = Math.round(cssH * dpr);
-  app.view.w = vw;
-  app.view.pad = (vw - C.BASE_W) / 2;
-  app.view.scale = scale * dpr;
-  app.view.css = scale;
+  v.w = vw;
+  v.pad = (vw - C.BASE_W) / 2;
+  v.scale = scale * dpr;
+  v.css = scale;
+  v.fullH = fullH;
+  v.oy = oy;
   app.touch.scale = (app.settings.touchScale || 100) / 100;
-  app.touch.layoutFor(app.view);
-  document.getElementById("rotate").style.display = app.isTouchDevice && H > W ? "flex" : "none";
+  app.touch.layoutFor(v);
+  document.body.classList.toggle("portrait", !!v.portrait);
 }
 window.addEventListener("resize", resize);
+document.addEventListener("fullscreenchange", () => setTimeout(resize, 100));
 window.addEventListener("orientationchange", () => setTimeout(resize, 200));
 app.relayout = resize;
 
 // ---------------------------------------------------------------------
 // Dedo / mouse
 // ---------------------------------------------------------------------
+// coordenadas del lienzo completo (y de 0 a fullH)
 function toLogical(e) {
   const r = canvas.getBoundingClientRect();
-  return { x: ((e.clientX - r.left) / r.width) * app.view.w, y: ((e.clientY - r.top) / r.height) * C.BASE_H };
+  return { x: ((e.clientX - r.left) / r.width) * app.view.w, y: ((e.clientY - r.top) / r.height) * app.view.fullH };
 }
 canvas.addEventListener("pointerdown", (e) => {
   e.preventDefault();
@@ -104,8 +116,10 @@ canvas.addEventListener("pointerdown", (e) => {
     canvas.setPointerCapture && canvas.setPointerCapture(e.pointerId);
     return;
   }
-  if (app.scene && app.scene.onPointer && app.scene.onPointer(p.x, p.y)) return;
-  const h = UI.hitAt(p.x, p.y);
+  if (!app.fullscreenAsked && app.isTouchDevice) { app.fullscreenAsked = true; app.enterFullscreen(); }
+  const gy = p.y - app.view.oy; // coordenadas de la zona de juego
+  if (app.scene && app.scene.onPointer && app.scene.onPointer(p.x, gy)) return;
+  const h = UI.hitAt(p.x, gy);
   if (h) h.fn();
 });
 canvas.addEventListener("pointermove", (e) => { const p = toLogical(e); app.touch.move(e.pointerId, p.x, p.y); });
@@ -118,8 +132,11 @@ canvas.addEventListener("contextmenu", (e) => e.preventDefault());
 app.enterFullscreen = async () => {
   const el = document.documentElement;
   try {
-    if (!document.fullscreenElement && el.requestFullscreen) await el.requestFullscreen({ navigationUI: "hide" });
-    if (screen.orientation && screen.orientation.lock) await screen.orientation.lock("landscape").catch(() => {});
+    // sin bloquear la orientación: se juega en vertical u horizontal
+    if (!document.fullscreenElement) {
+      if (el.requestFullscreen) await el.requestFullscreen({ navigationUI: "hide" });
+      else if (el.webkitRequestFullscreen) el.webkitRequestFullscreen();
+    }
   } catch (e) { /* no soportado (iPhone) */ }
 };
 app.toggleFullscreen = async () => {
@@ -160,9 +177,16 @@ function draw() {
   ctx.imageSmoothingQuality = "high";
   UI.clearHits();
   ctx.fillStyle = "#000";
-  ctx.fillRect(0, 0, v.w, C.BASE_H);
+  ctx.fillRect(0, 0, v.w, v.fullH);
+  if (v.portrait) drawPortraitFrame(v);
+  ctx.save();
+  ctx.translate(0, v.oy);
+  ctx.beginPath(); ctx.rect(0, 0, v.w, C.BASE_H); ctx.clip();
   if (app.scene && app.scene.draw) app.scene.draw(ctx, v);
+  ctx.restore();
   app.touch.draw(ctx);
+  ctx.save();
+  ctx.translate(0, v.oy);
   if (app.toastText && performance.now() < app.toastUntil) {
     const w = UI.measure(ctx, app.toastText, 17) + 40;
     UI.roundRect(ctx, v.w / 2 - w / 2, C.BASE_H - 108, w, 38, 10);
@@ -172,6 +196,22 @@ function draw() {
     ctx.strokeStyle = C.COLORS.yellow;
     ctx.stroke();
     UI.text(ctx, app.toastText, v.w / 2, C.BASE_H - 89, { size: 17 });
+  }
+  ctx.restore();
+}
+
+// Vertical: fondo de la zona de controles (debajo del juego)
+function drawPortraitFrame(v) {
+  const bg = UI.IMG.select_bg;
+  if (bg) {
+    UI.drawImageCover(ctx, bg, 0, 0, v.w, v.fullH);
+    ctx.fillStyle = "rgba(0,0,0,0.55)";
+    ctx.fillRect(0, 0, v.w, v.fullH);
+  }
+  ctx.fillStyle = "#000";
+  ctx.fillRect(0, v.oy - 4, v.w, C.BASE_H + 8);
+  if (!app.touch.visible || !app.touch.fightMode) {
+    UI.text(ctx, "Girá el celular para jugar más grande", v.w / 2, v.oy + C.BASE_H + 80, { size: 30, color: "#bbb" });
   }
 }
 
@@ -185,6 +225,7 @@ async function boot() {
   UI.fillBg(ctx, app.view);
   UI.text(ctx, "Cargando...", app.view.w / 2, C.BASE_H / 2, { size: 28 });
   try {
+    await UI.loadUiImages();
     await loadDatabase();
   } catch (e) {
     UI.text(ctx, "No se pudo cargar el juego: " + e.message, app.view.w / 2, C.BASE_H / 2 + 40, { size: 16, color: C.COLORS.red });

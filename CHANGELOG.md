@@ -1,5 +1,14 @@
 # Cambios
 
+## V.0.2
+- Interfaz visual de Mortal Kompa: logo (con cinta "POLÍTICO"), fondos de título / selección /
+  torre, marco de vida, timer, puntitos de rounds y especial, cartel de K.O., íconos de
+  Aleatorio, botones táctiles (puño, patada, distancia, bloqueo, especial con candado y aro de
+  carga, pausa, joystick) e íconos de joystick en los textos de ayuda.
+- Celular en vertical: ya no pide girar el teléfono; el juego va arriba y los controles abajo.
+- Pantalla completa al primer toque (Android) + botón "Pantalla completa" en el inicio;
+  instalable como app (manifest) para pantalla completa en iPhone.
+
 ## V.0.1
 - Primera versión web de Mortal Kompa Político (juego nuevo, separado de Mortal Kompa).
 - Jugabilidad portada de Mortal Kompa V.1.2: rounds al mejor de 3, especial con 5 golpes

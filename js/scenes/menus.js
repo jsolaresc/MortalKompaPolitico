@@ -47,19 +47,26 @@ export class ListMenu {
     else if (inp.justPressed("cancel") && this.onBack) this.onBack();
   }
   draw(ctx, view) {
-    UI.menuBackground(ctx, view, this.app.t);
+    UI.menuBackground(ctx, view, this.app.t, this.showLogo ? "title" : "select", this.showLogo ? 0.25 : 0.35);
     if (this.showLogo) UI.logo(ctx, view, 120);
     if (this.title) UI.title(ctx, view, this.title, 70);
     const cy = this.centerY ?? (this.showLogo ? 360 : 280);
     UI.menuList(ctx, view, this.items.map((i) => i.label), this.index, cy, (i) => this.pick(i),
       { disabled: this.items.map((i) => i.disabled) });
     if (this.onBack) UI.pillButton(ctx, 80, 36, "◄ VOLVER", () => this.onBack(), { size: 15, h: 36, minW: 110, color: "#3c3c48" });
+    fullscreenButton(this.app, ctx, view);
     UI.footer(ctx, view, this.footerText ?? footerHelp(this.app, !!this.onBack));
   }
 }
 
+export function fullscreenButton(app, ctx, view) {
+  if (!document.fullscreenEnabled || document.fullscreenElement) return;
+  UI.pillButton(ctx, view.w - 110, 36, "⛶ PANTALLA COMPLETA", () => app.enterFullscreen(), { size: 13, h: 32, minW: 190, color: "#3c3c48" });
+}
+
 export function footerHelp(app, back = true) {
   if (app.touchVisible() || (app.isTouchDevice && !gamepads.list.length)) return "Tocá una opción";
+  if (gamepads.list.length && gamepads.lastUsed > keyboard.lastUsed) return back ? "[dpad] elegir    [cross] confirmar    [circle] volver" : "[dpad] elegir    [cross] confirmar";
   const s = app.settings;
   const parts = [`▲▼ elegir`, `${keyLabel(s, "confirm")} / ENTER confirmar`];
   if (back) parts.push(`${keyLabel(s, "cancel")} / ESC volver`);
@@ -87,7 +94,7 @@ export class TitleScene {
     if (keyboard.lastUsed && performance.now() - keyboard.lastUsed < 50) this.start();
   }
   draw(ctx, view) {
-    UI.menuBackground(ctx, view, this.t);
+    UI.menuBackground(ctx, view, this.t, "title", 0.15);
     UI.logo(ctx, view, 190, 1.15);
     if (Math.floor(this.t * 2) % 2 === 0) {
       const msg = this.app.inviteRoom
@@ -96,6 +103,7 @@ export class TitleScene {
       UI.text(ctx, msg, view.w / 2, 400, { size: 24, color: COLORS.white });
     }
     UI.text(ctx, GAME_VERSION, 14, C.BASE_H - 16, { size: 14, align: "left", color: "#aaa" });
+    fullscreenButton(this.app, ctx, view);
   }
 }
 

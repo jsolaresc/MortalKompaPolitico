@@ -8,7 +8,7 @@
 // =====================================================================
 
 // Subila en cada entrega: V.0.1, V.0.2 ... hasta V.1.0
-export const GAME_VERSION = "V.0.1";
+export const GAME_VERSION = "V.0.2";
 export const GAME_TITLE = "Mortal Kompa Político";
 
 export const BASE_W = 960;          // ancho de la "ventana de pelea" (16:9)

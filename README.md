@@ -1,4 +1,4 @@
-# Mortal Kompa Político — V.0.1
+# Mortal Kompa Político — V.0.2
 
 Juego de pelea en el navegador, hermano de Mortal Kompa: misma jugabilidad,
 luchadores de la política argentina. No se instala: se juega desde una página
@@ -10,7 +10,10 @@ web (PC, celular o tablet).
   - J2: flechas · `1` puño · `2` patada · `3` a distancia · `4` cubrirse · `5` especial (fila de números o teclado numérico).
   - Joystick: □/X puño · ✕/A patada · ○/B distancia · △/Y especial · R1/RB cubrirse · START pausa.
   - Las teclas se cambian en Opciones > Controles.
-- **Celular:** el juego lo detecta solo y muestra joystick + botones en pantalla. Si conectás
+- **Celular:** el juego lo detecta solo y muestra joystick + botones en pantalla. Se puede
+  jugar **en vertical** (el juego arriba y los controles abajo) o en horizontal (más grande).
+  Al primer toque se pasa a **pantalla completa** (Android). En iPhone, Safari no permite
+  pantalla completa en páginas: usá *Compartir > Agregar a pantalla de inicio* y abrilo desde ese ícono. Si conectás
   un joystick por Bluetooth, los botones táctiles se esconden y se juega con el joystick
   (con dos joysticks se puede jugar de a dos en el mismo celular).
 - El **Especial** se habilita después de recibir 5 golpes. 2% de golpes críticos en puño/patada.
@@ -76,6 +79,12 @@ Los 9 políticos son **maniquíes provisorios** dibujados por código
   Un escenario más ancho que 16:9 hace scroll con la cámara. `"secret": true` = escenario secreto
   (también es el de la final del Torneo y del jefe de la Torre).
 - Música de menú: listala en `data/music.json`. Esta versión no trae música (a pedido).
+
+## Interfaz
+Logo, fondos de menú, marco de la barra de vida, timer, puntitos de rounds y especial,
+cartel de K.O., íconos de "Aleatorio", botones táctiles y los íconos de botones de joystick
+son los mismos de Mortal Kompa (`assets/ui/`). Reemplazá cualquier PNG/JPG con el mismo
+nombre para cambiarlo; si falta uno, el juego dibuja un reemplazo.
 
 ## Estructura
 ```

@@ -8,6 +8,26 @@ import { COLORS } from "./config.js";
 
 export const FONT = "'Roboto Black', 'Arial Black', Impact, sans-serif";
 
+// Imágenes de interfaz (las mismas de Mortal Kompa, en assets/ui/). Si
+// falta alguna, el juego dibuja un reemplazo por código.
+import { loadImage } from "./assets.js";
+export const IMG = {};
+const UI_FILES = {
+  title_logo: "title_logo.png", title_bg: "title_background.jpg", select_bg: "character_selection_background.jpg",
+  tower_bg: "tower_background.jpg", healthbar_frame: "healthbar_frame.png", ko_banner: "ko_banner.png",
+  timer: "timer_container.png", round_on: "round_pip_filled.png", round_off: "round_pip_empty.png",
+  sp_empty: "special_pip_empty.png", sp_filled: "special_pip_filled.png", sp_ready: "special_pip_ready.png",
+  random_pose: "random_pose.png", random_sel: "random_selection.png", random_stage: "random_stage_selection.png",
+  t_punch: "touch/punch.png", t_kick: "touch/kick.png", t_ranged: "touch/ranged.png", t_block: "touch/block.png",
+  t_special: "touch/special.png", t_special_locked: "touch/special_locked.png", t_pause: "touch/pause.png",
+  t_joy_base: "touch/joystick_base.png", t_joy_knob: "touch/joystick_knob.png",
+  b_square: "buttons/square.png", b_cross: "buttons/cross.png", b_circle: "buttons/circle.png",
+  b_triangle: "buttons/triangle.png", b_r1: "buttons/r1.png", b_options: "buttons/options.png", b_dpad: "buttons/dpad.png",
+};
+export async function loadUiImages() {
+  await Promise.all(Object.entries(UI_FILES).map(async ([k, f]) => { IMG[k] = await loadImage(`assets/ui/${f}`); }));
+}
+
 // Zonas tocables/clickeables registradas en cada cuadro por la escena
 // activa (menús con mouse o dedo). Se vacían antes de cada draw.
 export const hits = [];
@@ -65,8 +85,15 @@ export function fillBg(ctx, view, top = "#1d1530", bottom = "#0b0b10") {
   ctx.fillRect(0, 0, view.w, C.BASE_H);
 }
 
-// Fondo de menú: franjas celestes y blancas en diagonal, muy sutiles
-export function menuBackground(ctx, view, t = 0) {
+// Fondo de menú: imagen de Mortal Kompa (title / select / tower) con
+// un velo oscuro para que se lea el texto; si falta, franjas celestes.
+export function menuBackground(ctx, view, t = 0, bg = "select", dim = 0.35) {
+  const img = IMG[bg + "_bg"];
+  if (img) {
+    drawImageCover(ctx, img, 0, 0, view.w, C.BASE_H);
+    if (dim > 0) { ctx.fillStyle = `rgba(0,0,0,${dim})`; ctx.fillRect(0, 0, view.w, C.BASE_H); }
+    return;
+  }
   fillBg(ctx, view, "#16203a", "#08080d");
   ctx.save();
   ctx.globalAlpha = 0.07;
@@ -91,16 +118,25 @@ export function logo(ctx, view, y = 120, scale = 1) {
   ctx.save();
   ctx.translate(view.w / 2, y);
   ctx.scale(scale, scale);
-  text(ctx, "MORTAL KOMPA", 0, -10, { size: 74, color: "#f0c828", stroke: 10, strokeColor: "#3a1400" });
+  if (IMG.title_logo) {
+    const w = 600, h = w * IMG.title_logo.naturalHeight / IMG.title_logo.naturalWidth;
+    ctx.drawImage(IMG.title_logo, -w / 2, -h / 2 - 18, w, h);
+  } else {
+    text(ctx, "MORTAL KOMPA", 0, -10, { size: 74, color: "#f0c828", stroke: 10, strokeColor: "#3a1400" });
+  }
+  // cinta "POLÍTICO" (celeste y blanca) debajo del logo de Mortal Kompa
   ctx.save();
-  ctx.rotate(-0.04);
-  roundRect(ctx, -150, 34, 300, 46, 8);
-  ctx.fillStyle = COLORS.celeste;
+  ctx.translate(150, 62);
+  ctx.rotate(-0.06);
+  roundRect(ctx, -120, -22, 240, 44, 8);
+  const g = ctx.createLinearGradient(0, -22, 0, 22);
+  g.addColorStop(0, "#8cc8f4"); g.addColorStop(0.5, "#ffffff"); g.addColorStop(1, "#6cb4ee");
+  ctx.fillStyle = g;
   ctx.fill();
   ctx.lineWidth = 4;
-  ctx.strokeStyle = "#0b2340";
+  ctx.strokeStyle = "#1a1a22";
   ctx.stroke();
-  text(ctx, "POLÍTICO", 0, 58, { size: 36, color: "#ffffff", stroke: 6, strokeColor: "#0b2340", shadow: false });
+  text(ctx, "POLÍTICO", 0, 2, { size: 32, color: "#0b2340", shadow: false });
   ctx.restore();
   ctx.restore();
 }
@@ -126,6 +162,11 @@ function healthBar(ctx, x, y, w, h, ratio, flip) {
   }
   ctx.fillStyle = "rgba(255,255,255,0.18)";
   ctx.fillRect(x + 2, y + 2, w - 4, h * 0.35);
+  if (IMG.healthbar_frame) ctx.drawImage(IMG.healthbar_frame, x - 10, y - 10, w + 20, h + 20);
+}
+
+function pipImg(ctx, img, cx, cy, size) {
+  ctx.drawImage(img, cx - size / 2, cy - size / 2, size, size);
 }
 
 function pip(ctx, cx, cy, r, fill, stroke = "#000") {
@@ -143,6 +184,8 @@ function specialPips(ctx, x, y, hits, req, alignRight, t) {
   const ready = hits >= req;
   for (let i = 0; i < req; i++) {
     const cx = alignRight ? x - (req - 1 - i) * gap : x + i * gap;
+    const img = ready ? IMG.sp_ready : i < hits ? IMG.sp_filled : IMG.sp_empty;
+    if (img) { pipImg(ctx, img, cx, y, ready ? 15 + Math.sin(t * 8) * 1.5 : 14); continue; }
     let col = i < hits ? COLORS.white : COLORS.gray;
     if (ready) col = `hsl(${45 + Math.sin(t * 8) * 10}, 95%, ${55 + Math.sin(t * 8) * 10}%)`;
     pip(ctx, cx, y, 5.5, col);
@@ -161,15 +204,24 @@ export function drawHud(ctx, view, hud) {
   specialPips(ctx, m + barW - 3, HUD_NAME_Y + 8, a.hits, C.SPECIAL_HITS_REQUIRED, true, hud.t);
   specialPips(ctx, view.w - m - barW + 3, HUD_NAME_Y + 8, b.hits, C.SPECIAL_HITS_REQUIRED, false, hud.t);
   for (let i = 0; i < C.ROUNDS_TO_WIN; i++) {
-    pip(ctx, m + 10 + i * 20, HUD_DOTS_Y, 6, i < hud.wins[0] ? COLORS.yellow : COLORS.gray);
-    pip(ctx, view.w - m - 10 - i * 20, HUD_DOTS_Y, 6, i < hud.wins[1] ? COLORS.yellow : COLORS.gray);
+    const pos = [[m + 10 + i * 20, 0], [view.w - m - 10 - i * 20, 1]];
+    for (const [cx, k] of pos) {
+      const won = i < hud.wins[k];
+      const img = won ? IMG.round_on : IMG.round_off;
+      if (img) pipImg(ctx, img, cx, HUD_DOTS_Y, 16);
+      else pip(ctx, cx, HUD_DOTS_Y, 6, won ? COLORS.yellow : COLORS.gray);
+    }
   }
-  roundRect(ctx, view.w / 2 - 40, HUD_BAR_Y + HUD_BAR_H / 2 - 26, 80, 52, 10);
-  ctx.fillStyle = "rgba(10,10,16,0.85)";
-  ctx.fill();
-  ctx.lineWidth = 3;
-  ctx.strokeStyle = COLORS.yellow;
-  ctx.stroke();
+  if (IMG.timer) {
+    ctx.drawImage(IMG.timer, view.w / 2 - 43, HUD_BAR_Y + HUD_BAR_H / 2 - 28, 86, 56);
+  } else {
+    roundRect(ctx, view.w / 2 - 40, HUD_BAR_Y + HUD_BAR_H / 2 - 26, 80, 52, 10);
+    ctx.fillStyle = "rgba(10,10,16,0.85)";
+    ctx.fill();
+    ctx.lineWidth = 3;
+    ctx.strokeStyle = COLORS.yellow;
+    ctx.stroke();
+  }
   text(ctx, String(Math.max(0, Math.floor(hud.time))), view.w / 2, HUD_BAR_Y + HUD_BAR_H / 2 + 1, { size: 30 });
 }
 
@@ -184,7 +236,8 @@ export function koBanner(ctx, view, kind, t = 0) {
     ctx.save();
     ctx.translate(view.w / 2, C.BASE_H / 2);
     ctx.scale(s, s);
-    text(ctx, "K.O.", 0, 0, { size: 120, color: COLORS.red, stroke: 12, strokeColor: "#200" });
+    if (IMG.ko_banner) ctx.drawImage(IMG.ko_banner, -240, -82, 480, 165);
+    else text(ctx, "K.O.", 0, 0, { size: 120, color: COLORS.red, stroke: 12, strokeColor: "#200" });
     ctx.restore();
     return;
   }
@@ -220,8 +273,20 @@ export function menuList(ctx, view, items, index, centerY, onPick, o = {}) {
   });
 }
 
+// Pie de ayuda. Admite íconos de botón de joystick con [cross], [circle],
+// [square], [triangle], [r1], [options], [dpad] (los de Mortal Kompa).
 export function footer(ctx, view, str, y = C.BASE_H - 22) {
-  text(ctx, str, view.w / 2, y, { size: 15, color: "#cfcfd8" });
+  if (!str.includes("[")) { text(ctx, str, view.w / 2, y, { size: 15, color: "#cfcfd8" }); return; }
+  const parts = str.split(/(\[[a-z0-9]+\])/).filter(Boolean);
+  const ICON = 24;
+  const widths = parts.map((p) => (/^\[.+\]$/.test(p) ? ICON + 4 : measure(ctx, p, 15)));
+  let x = view.w / 2 - widths.reduce((a, b) => a + b, 0) / 2;
+  parts.forEach((p, i) => {
+    const m = p.match(/^\[(.+)\]$/);
+    if (m && IMG["b_" + m[1]]) ctx.drawImage(IMG["b_" + m[1]], x + 2, y - ICON / 2, ICON, ICON);
+    else text(ctx, p, x, y, { size: 15, color: "#cfcfd8", align: "left" });
+    x += widths[i];
+  });
 }
 
 export function pillButton(ctx, cx, cy, label, onTap, o = {}) {

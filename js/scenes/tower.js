@@ -84,7 +84,7 @@ class TowerScene {
     }));
   }
   draw(ctx, view) {
-    UI.menuBackground(ctx, view, this.app.t);
+    UI.menuBackground(ctx, view, this.app.t, "tower", 0.2);
     const t = this.tower;
     const n = t.opps.length;
     UI.title(ctx, view, `PISO ${t.floor + 1} DE ${n}`, 40);
@@ -122,7 +122,8 @@ class TowerScene {
     UI.text(ctx, me.name, 140, C.BASE_H - 60, { size: 24 });
     const o = t.opps[t.floor];
     if (o) {
-      if (o.boss) UI.text(ctx, "?", view.w - 140, C.BASE_H / 2, { size: 160, color: "#22222c", stroke: 6, strokeColor: "#555" });
+      if (o.boss && UI.IMG.random_pose) UI.drawImageContain(ctx, UI.IMG.random_pose, view.w - 250, 90, 220, C.BASE_H - 170, true);
+      else if (o.boss) UI.text(ctx, "?", view.w - 140, C.BASE_H / 2, { size: 160, color: "#22222c", stroke: 6, strokeColor: "#555" });
       else UI.drawImageContain(ctx, DB.bySlug[o.slug].pose, view.w - 250, 90, 220, C.BASE_H - 170, true);
       UI.text(ctx, o.boss ? "???" : o.name, view.w - 140, C.BASE_H - 60, { size: 24, color: COLORS.yellow });
     }
@@ -163,7 +164,7 @@ class TowerVictory {
     if (ok(this.app.anyInput)) Flow.mainMenu(this.app);
   }
   draw(ctx, view) {
-    UI.fillBg(ctx, view, "#2a1a40", "#0b0b10");
+    UI.menuBackground(ctx, view, 0, "tower", 0.3);
     const me = DB.bySlug[this.tower.me];
     UI.drawImageContain(ctx, me.pose, view.w / 2 - 140, 130, 280, C.BASE_H - 170);
     this.confetti.draw(ctx);

@@ -25,6 +25,10 @@ function gridLayout(n, availW, availH, gap = 10) {
 }
 
 export function drawRandomTile(ctx, x, y, s) {
+  if (UI.IMG.random_sel) {
+    ctx.save(); UI.roundRect(ctx, x, y, s, s, 10); ctx.clip();
+    ctx.drawImage(UI.IMG.random_sel, x, y, s, s); ctx.restore(); return;
+  }
   UI.roundRect(ctx, x, y, s, s, 10);
   const g = ctx.createLinearGradient(x, y, x, y + s);
   g.addColorStop(0, "#3a3a48"); g.addColorStop(1, "#1a1a22");
@@ -148,6 +152,7 @@ export class CharSelectScene {
     g.addColorStop(0, col + "55"); g.addColorStop(1, "rgba(0,0,0,0)");
     ctx.fillStyle = g; ctx.fillRect(x, top, w, h + 20);
     if (entry && entry.pose) UI.drawImageContain(ctx, entry.pose, x + 10, top, w - 20, h, p === 1);
+    else if (!entry && UI.IMG.random_pose) UI.drawImageContain(ctx, UI.IMG.random_pose, x + 10, top, w - 20, h, p === 1);
     else if (!entry) {
       UI.text(ctx, "?", x + w / 2, top + h / 2, { size: 150, color: "#2a2a34", shadow: false, stroke: 6, strokeColor: "#555" });
     }
@@ -240,6 +245,7 @@ export class StageSelectScene {
       UI.roundRect(ctx, x, y, cw, ch, 10);
       ctx.clip();
       if (c.thumb) UI.drawImageCover(ctx, c.thumb, x, y, cw, ch);
+      else if (c.id === RANDOM && UI.IMG.random_stage) UI.drawImageCover(ctx, UI.IMG.random_stage, x, y, cw, ch);
       else { ctx.fillStyle = "#24242e"; ctx.fillRect(x, y, cw, ch); UI.text(ctx, "?", x + cw / 2, y + ch / 2, { size: 60, color: COLORS.yellow }); }
       ctx.restore();
       const sel = i === this.index;

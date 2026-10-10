@@ -262,7 +262,7 @@ export class TournamentVictory {
   }
   done() { if (this.onDone) this.onDone(); else Flow.mainMenu(this.app); }
   draw(ctx, view) {
-    UI.fillBg(ctx, view, "#2a1a40", "#0b0b10");
+    UI.menuBackground(ctx, view, 0, "tower", 0.3);
     const ent = DB.bySlug[this.champion.slug];
     if (ent) UI.drawImageContain(ctx, ent.pose, view.w / 2 - 140, 130, 280, C.BASE_H - 170);
     this.confetti.draw(ctx);
