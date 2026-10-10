@@ -1,0 +1,122 @@
+{
+  "_comentario": "Personaje PROVISORIO generado por tools/generar_placeholders.py. Cuando cargues el arte real, poné 'placeholder': false para que el script no lo pise, y ajustá 'frames' de cada animación a la cantidad real de PNG.",
+  "placeholder": true,
+  "name": "Milei",
+  "sprite_folder": "assets/characters/milei",
+  "scale": 0.5,
+  "health": 100,
+  "walk_speed": 4,
+  "projectile_frames": 4,
+  "projectile_scale": 0.5,
+  "accent": "#9650dc",
+  "animations": {
+    "idle": {
+      "fps": 6,
+      "loop": true,
+      "frames": 3
+    },
+    "walk": {
+      "fps": 10,
+      "loop": true,
+      "frames": 4
+    },
+    "jump": {
+      "fps": 8,
+      "loop": false,
+      "frames": 4
+    },
+    "punch": {
+      "fps": 16,
+      "loop": false,
+      "damage": 8,
+      "reach": 95,
+      "hit_height": 66,
+      "hit_offset_y": 110,
+      "active_frames": [
+        1,
+        2
+      ],
+      "frames": 4
+    },
+    "kick": {
+      "fps": 14,
+      "loop": false,
+      "damage": 12,
+      "reach": 115,
+      "hit_height": 72,
+      "hit_offset_y": 83,
+      "active_frames": [
+        2
+      ],
+      "frames": 4
+    },
+    "special": {
+      "fps": 14,
+      "loop": false,
+      "damage": 20,
+      "reach": 115,
+      "hit_height": 88,
+      "hit_offset_y": 94,
+      "active_frames": [
+        3,
+        4
+      ],
+      "frames": 6
+    },
+    "ranged": {
+      "fps": 14,
+      "loop": false,
+      "damage": 4,
+      "active_frames": [
+        2
+      ],
+      "speed": 9,
+      "launch_height": "low",
+      "projectile_mode": "spin",
+      "trajectory": "bounce",
+      "kick_height": 200,
+      "gravity_mult": 5,
+      "bounce_damping": 0.55,
+      "frames": 4
+    },
+    "ranged_crouch": {
+      "fps": 14,
+      "loop": false,
+      "damage": 4,
+      "active_frames": [
+        2
+      ],
+      "speed": 9,
+      "launch_height": "crouch_mid",
+      "projectile_mode": "spin",
+      "trajectory": "straight",
+      "frames": 4
+    },
+    "crouch": {
+      "fps": 6,
+      "loop": true,
+      "frames": 2
+    },
+    "block": {
+      "fps": 6,
+      "loop": true,
+      "frames": 2
+    },
+    "block_crouch": {
+      "fps": 6,
+      "loop": true,
+      "frames": 2
+    },
+    "ko": {
+      "fps": 6,
+      "loop": false,
+      "frames": 6
+    },
+    "win": {
+      "fps": 6,
+      "loop": true,
+      "frames": 4
+    }
+  },
+  "sounds": {}
+}

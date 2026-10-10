@@ -1,0 +1,10 @@
+{
+  "_comentario": "Escenarios. 'image' puede ser .png/.jpg/.webp (fijo) o .mp4/.webm (video en loop, sin sonido). 'music' es opcional (.mp3/.ogg). 'secret': true lo saca del selector y del sorteo (se elige apretando Start/Enter en la selección de escenario; también es el de la pelea final de la Torre y del Torneo).",
+  "stages": [
+    {"id": "plaza", "name": "Plaza de Mayo", "image": "assets/stages/Plaza de Mayo.png", "music": null},
+    {"id": "congreso", "name": "Congreso", "image": "assets/stages/Congreso.png", "music": null},
+    {"id": "obelisco", "name": "Obelisco", "image": "assets/stages/Obelisco.png", "music": null},
+    {"id": "olivos", "name": "Quinta de Olivos", "image": "assets/stages/Quinta de Olivos.png", "music": null},
+    {"id": "destino", "name": "Destino Final", "image": "assets/stages/Destino Final.png", "music": null, "secret": true}
+  ]
+}

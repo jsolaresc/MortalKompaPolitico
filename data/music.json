@@ -1,0 +1,4 @@
+{
+  "_comentario": "Música de menú (se elige una al azar). Poné los archivos en assets/sounds/music/ y listalos acá, ej: \"assets/sounds/music/tema.mp3\". Vacío = sin música.",
+  "menu": []
+}

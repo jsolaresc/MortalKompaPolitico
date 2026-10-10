@@ -1,0 +1,4 @@
+{
+  "_comentario": "Orden de los luchadores en la selección. Cada nombre es un archivo data/characters/<nombre>.json. Para sumar uno nuevo: copiá un JSON, sus carpetas de sprites, y agregalo acá.",
+  "characters": ["milei", "cristina", "alberto", "kicillof", "macri", "scioli", "bregman", "massa", "bullrich"]
+}
