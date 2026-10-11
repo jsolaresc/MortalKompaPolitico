@@ -192,6 +192,8 @@ function specialPips(ctx, x, y, hits, req, alignRight, t) {
   }
 }
 
+export const hudOpts = { showSpecialPips: true };
+
 /** hud = { f: [{name, health, maxHealth, hits}], time, wins:[a,b], t } */
 export function drawHud(ctx, view, hud) {
   const m = HUD_MARGIN;
@@ -201,8 +203,11 @@ export function drawHud(ctx, view, hud) {
   healthBar(ctx, view.w - m - barW, HUD_BAR_Y, barW, HUD_BAR_H, b.health / b.maxHealth, true);
   text(ctx, a.name, m, HUD_NAME_Y + 8, { size: 18, align: "left" });
   text(ctx, b.name, view.w - m, HUD_NAME_Y + 8, { size: 18, align: "right" });
-  specialPips(ctx, m + barW - 3, HUD_NAME_Y + 8, a.hits, C.SPECIAL_HITS_REQUIRED, true, hud.t);
-  specialPips(ctx, view.w - m - barW + 3, HUD_NAME_Y + 8, b.hits, C.SPECIAL_HITS_REQUIRED, false, hud.t);
+  // con controles táctiles, el botón de Especial reemplaza a los pips
+  if (hudOpts.showSpecialPips) {
+    specialPips(ctx, m + barW - 3, HUD_NAME_Y + 8, a.hits, C.SPECIAL_HITS_REQUIRED, true, hud.t);
+    specialPips(ctx, view.w - m - barW + 3, HUD_NAME_Y + 8, b.hits, C.SPECIAL_HITS_REQUIRED, false, hud.t);
+  }
   for (let i = 0; i < C.ROUNDS_TO_WIN; i++) {
     const pos = [[m + 10 + i * 20, 0], [view.w - m - 10 - i * 20, 1]];
     for (const [cx, k] of pos) {

@@ -182,6 +182,7 @@ function frame(now) {
   while (acc >= C.DT && steps < 5) {
     pollGamepads();
     app.touch.visible = app.touchVisible();
+    UI.hudOpts.showSpecialPips = !app.touch.visible;
     for (const i of app.inputs) i.poll();
     if (app.scene && app.scene.update) app.scene.update(C.DT);
     if (app.net && app.net.tick) app.net.tick(C.DT);

@@ -1,5 +1,13 @@
 # Cambios
 
+## V.0.4
+- Controles táctiles con la misma ubicación, tamaño y comportamiento que Mortal Kompa Android
+  (abanico de botones para el pulgar, joystick flotante en la mitad izquierda, especial con
+  aro de carga de 5 partes).
+- Con los controles táctiles en pantalla se ocultan los pips de especial del HUD (el botón de
+  Especial ya muestra la carga).
+- Botón de pausa arriba a la izquierda, debajo del nombre del J1.
+
 ## V.0.3
 - En celular el juego siempre se ve en horizontal: en vertical se dibuja ya girado (sin pedir que
   gires el teléfono ni depender de la rotación automática). En Android, al primer toque entra en

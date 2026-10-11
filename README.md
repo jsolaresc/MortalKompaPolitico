@@ -1,4 +1,4 @@
-# Mortal Kompa Político — V.0.3
+# Mortal Kompa Político — V.0.4
 
 Juego de pelea en el navegador, hermano de Mortal Kompa: misma jugabilidad,
 luchadores de la política argentina. No se instala: se juega desde una página

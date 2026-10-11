@@ -1,7 +1,13 @@
 // =====================================================================
 // touch.js — controles táctiles para celular (joystick + botones)
-// Izquierda: joystick flotante (aparece donde apoyás el dedo).
-// Derecha: Puño, Patada, Distancia, Bloqueo y Especial (con carga).
+// Misma ubicación, tamaño y comportamiento que la versión Android de
+// Mortal Kompa (engine/touch.py):
+//   - Izquierda: joystick flotante (aparece donde apoyás el dedo, en la
+//     mitad izquierda; si no hay dedo queda de guía abajo a la izquierda).
+//   - Derecha: abanico para el pulgar con Patada, Puño, Distancia,
+//     Especial y Bloqueo. El botón de Especial REEMPLAZA a los 5 pips del
+//     HUD: arranca con candado y un aro de 5 partes que se va llenando.
+//   - Arriba a la izquierda (debajo del nombre del J1): pausa.
 // Solo se muestran en las pantallas de pelea; en los menús se toca
 // directo la opción.
 // =====================================================================
@@ -13,85 +19,66 @@ export const IS_TOUCH_DEVICE = (() => {
   return !!(coarse || ("ontouchstart" in window && navigator.maxTouchPoints > 0));
 })();
 
-const BUTTONS = [
-  { a: "punch", label: "PUÑO", color: "#d84a3a" },
-  { a: "kick", label: "PATADA", color: "#3a8ad8" },
-  { a: "ranged", label: "DIST.", color: "#3aa860" },
-  { a: "block", label: "BLOQ.", color: "#8a8a96" },
-  { a: "special", label: "ESP.", color: "#e0a020" },
-];
+const COLORS = { punch: "#4696eb", kick: "#eb5a50", ranged: "#3cbe78", special: "#f0be28", block: "#9696a5" };
+const LABELS = { punch: "PUÑO", kick: "PATADA", ranged: "DISTANCIA", special: "ESPECIAL", block: "BLOQUEO" };
+// disco real de los PNG de especial (las llamas que sobresalen no cuentan)
+const SPECIAL_DISC = { ox: -0.006, oy: 0.096, fr: 0.889 };
 
 export class TouchControls {
   constructor() {
     this.pointers = new Map(); // id -> {kind:'joy'|'btn', ...}
-    this.joy = null;           // {bx, by, x, y, id}
+    this.joy = null;           // {bx, by, x, y}
     this.fightMode = false;
     this.visible = false;
     this.pauseTapped = false;
-    this.edges = new Set();   // botones tocados desde el último cuadro (toques cortísimos)
+    this.edges = new Set();    // botones tocados desde el último cuadro (toques cortísimos)
     this.specialCharge = 0;
     this.scale = 1;
     this.layoutFor({ w: C.BASE_W, pad: 0 });
   }
 
-  // Posiciones en coordenadas del lienzo COMPLETO (en vertical el juego
-  // ocupa la franja de arriba y los controles van en la zona de abajo).
+  // u(): mismas medidas que la versión Android (calibradas sobre una
+  // pantalla de 720 px de alto) llevadas al lienzo de 540 de alto.
   layoutFor(view) {
-    const s = this.scale;
-    const w = view.w;
-    let u, cx, cy, joyHome, joyZone, pause;
-    if (view.portrait) {
-      const top = view.oy + C.BASE_H + 20;
-      const A = Math.max(200, view.fullH - top - 20);
-      u = Math.min((A * 0.8) / 250, (w * 0.56) / 240) * s;
-      cx = w * 0.70; cy = top + Math.min(A * 0.58, A - 140 * u);
-      joyHome = { x: w * 0.22, y: cy + 20 * u };
-      joyZone = { x: 0, y: top - 10, w: w * 0.48, h: A + 30 };
-      pause = { x: w / 2, y: top + Math.min(70, A * 0.12), r: 22 * u };
-    } else {
-      u = s;
-      cx = w - 66 * u - 82 * u; cy = C.BASE_H - 70 * u - 80 * u;
-      joyHome = { x: 110, y: C.BASE_H - 110 };
-      joyZone = { x: 0, y: 120, w: w * 0.45, h: C.BASE_H - 120 };
-      pause = { x: w / 2, y: 108, r: 20 };
-    }
-    const bx = cx + 82 * u, by = cy + 80 * u;
-    this.R = 36 * u;
-    this.btnPos = {
-      block: { x: bx, y: by - 70 * u },
-      kick: { x: bx - 82 * u, y: by + 8 * u },
-      punch: { x: bx - 164 * u, y: by - 40 * u },
-      ranged: { x: bx - 82 * u, y: by - 96 * u },
-      special: { x: bx - 2 * u, y: by - 168 * u },
-    };
-    this.pausePos = pause;
-    this.joyZone = joyZone;
-    this.joyHome = joyHome;
-    this.portrait = !!view.portrait;
+    const dw = view.w, dh = C.BASE_H;
+    const u = (v) => (v * dh) / 720 * this.scale;
+    this.u = u;
+    this.dw = dw; this.dh = dh;
+    this.joyR = u(105);
+    this.knobR = u(48);
+    this.joyHome = { x: u(70) + this.joyR, y: dh - u(60) - this.joyR };
+    this.buttons = [
+      { a: "kick", x: dw - u(112), y: dh - u(118), r: u(74) },
+      { a: "punch", x: dw - u(272), y: dh - u(92), r: u(66) },
+      { a: "ranged", x: dw - u(240), y: dh - u(258), r: u(58) },
+      { a: "special", x: dw - u(92), y: dh - u(298), r: u(64) },
+      { a: "block", x: dw - u(405), y: dh - u(150), r: u(50) },
+    ];
+    // pausa: arriba a la izquierda, debajo del nombre del luchador 1
+    this.pausePos = { x: u(66), y: u(182), r: u(28) };
     this.view = view;
   }
 
-  buttonAt(x, y) {
+  buttonAt(x, y, slop = 1.15) {
     let best = null, bestD = Infinity;
-    for (const b of BUTTONS) {
-      const p = this.btnPos[b.a];
-      const d = Math.hypot(x - p.x, y - p.y);
-      if (d < this.R * 1.25 && d < bestD) { best = b.a; bestD = d; }
+    for (const b of this.buttons) {
+      const d = Math.hypot(x - b.x, y - b.y);
+      if (d <= b.r * slop && d < bestD) { best = b.a; bestD = d; }
     }
     return best;
   }
 
   down(id, x, y) {
     if (!this.visible || !this.fightMode) return false;
-    if (Math.hypot(x - this.pausePos.x, y - this.pausePos.y) < this.pausePos.r * 1.6) {
-      this.pauseTapped = true;
-      return true;
-    }
+    const pp = this.pausePos;
+    if (Math.hypot(x - pp.x, y - pp.y) <= pp.r * 1.3) { this.pauseTapped = true; return true; }
     const b = this.buttonAt(x, y);
     if (b) { this.pointers.set(id, { kind: "btn", a: b }); this.edges.add(b); return true; }
-    const z = this.joyZone;
-    if (x >= z.x && x <= z.x + z.w && y >= z.y) {
-      this.joy = { id, bx: x, by: y, x, y };
+    if (x < this.dw * 0.42 && y > this.dh * 0.22 && !this.joy) {
+      const r = this.joyR;
+      const bx = Math.min(Math.max(x, r + this.u(10)), this.dw * 0.42);
+      const by = Math.min(Math.max(y, this.dh * 0.22 + r * 0.5), this.dh - r - this.u(10));
+      this.joy = { id, bx, by, x, y };
       this.pointers.set(id, { kind: "joy" });
       return true;
     }
@@ -101,15 +88,10 @@ export class TouchControls {
   move(id, x, y) {
     const p = this.pointers.get(id);
     if (!p) return;
-    if (p.kind === "joy" && this.joy) {
-      this.joy.x = x; this.joy.y = y;
-      // el centro "persigue" al dedo si se aleja mucho
-      const R = this.R * 1.4;
-      const dx = x - this.joy.bx, dy = y - this.joy.by;
-      const d = Math.hypot(dx, dy);
-      if (d > R * 1.6) { this.joy.bx = x - (dx / d) * R * 1.6; this.joy.by = y - (dy / d) * R * 1.6; }
-    } else if (p.kind === "btn") {
-      const b = this.buttonAt(x, y);
+    if (p.kind === "joy" && this.joy) { this.joy.x = x; this.joy.y = y; }
+    else if (p.kind === "btn") {
+      // se puede deslizar de un botón a otro sin levantar el dedo
+      const b = this.buttonAt(x, y, 1.0);
       if (b) p.a = b;
     }
   }
@@ -128,94 +110,113 @@ export class TouchControls {
     if (this.edges.has(action)) return true;
     for (const p of this.pointers.values()) if (p.kind === "btn" && p.a === action) return true;
     if (this.joy) {
-      const dx = this.joy.x - this.joy.bx, dy = this.joy.y - this.joy.by;
-      const dz = this.R * 0.45;
-      if (action === "left") return dx < -dz;
-      if (action === "right") return dx > dz;
-      if (action === "up") return dy < -dz * 1.3 && Math.abs(dy) > Math.abs(dx) * 0.6;
-      if (action === "down") return dy > dz * 1.3 && Math.abs(dy) > Math.abs(dx) * 0.6;
+      const dx = (this.joy.x - this.joy.bx) / this.joyR;
+      const dy = (this.joy.y - this.joy.by) / this.joyR;
+      if (action === "right") return dx > 0.38;
+      if (action === "left") return dx < -0.38;
+      if (action === "up") return dy < -0.55;
+      if (action === "down") return dy > 0.55;
     }
     return false;
   }
 
   endFrame() { this.pauseTapped = false; this.edges.clear(); }
 
+  // ---------------------------------------------------------------
+  face(ctx, key, x, y, r, alpha) {
+    const im = IMG[key];
+    if (!im) return false;
+    const w = im.naturalWidth, h = im.naturalHeight;
+    const f = (2 * r) / Math.max(w, h);
+    ctx.globalAlpha = alpha;
+    ctx.drawImage(im, x - (w * f) / 2, y - (h * f) / 2, w * f, h * f);
+    return true;
+  }
+
+  fallbackDisc(ctx, action, x, y, r, alpha) {
+    ctx.globalAlpha = alpha;
+    ctx.beginPath(); ctx.arc(x, y, r, 0, Math.PI * 2);
+    ctx.fillStyle = COLORS[action] || "#5a5a64"; ctx.fill();
+    ctx.lineWidth = 3; ctx.strokeStyle = "rgba(255,255,255,0.9)"; ctx.stroke();
+    ctx.globalAlpha = 1;
+    if (LABELS[action]) text(ctx, LABELS[action], x, y + 1, { size: r * 0.32, shadow: false });
+  }
+
   draw(ctx) {
     if (!this.visible || !this.fightMode) return;
     ctx.save();
-    const img = (k, x, y, size, alpha) => {
-      const im = IMG[k];
-      if (!im) return false;
-      ctx.globalAlpha = alpha;
-      ctx.drawImage(im, x - size / 2, y - size / 2, size, size);
-      return true;
-    };
+    const pressed = new Set([...this.pointers.values()].filter((p) => p.kind === "btn").map((p) => p.a));
+
+    // joystick
+    let base, knob, aBase, aKnob;
+    if (this.joy) {
+      base = { x: this.joy.bx, y: this.joy.by };
+      let dx = this.joy.x - base.x, dy = this.joy.y - base.y;
+      const d = Math.hypot(dx, dy), lim = this.joyR * 0.85;
+      if (d > lim) { dx = (dx * lim) / d; dy = (dy * lim) / d; }
+      knob = { x: base.x + dx, y: base.y + dy };
+      aBase = 150 / 255; aKnob = 220 / 255;
+    } else {
+      base = this.joyHome; knob = base;
+      aBase = 95 / 255; aKnob = 120 / 255;
+    }
+    if (!this.face(ctx, "t_joy_base", base.x, base.y, this.joyR, aBase)) {
+      ctx.globalAlpha = aBase * 0.6;
+      ctx.beginPath(); ctx.arc(base.x, base.y, this.joyR, 0, Math.PI * 2); ctx.fillStyle = "#fff"; ctx.fill();
+    }
+    if (!this.face(ctx, "t_joy_knob", knob.x, knob.y, this.knobR, aKnob)) {
+      ctx.globalAlpha = aKnob;
+      ctx.beginPath(); ctx.arc(knob.x, knob.y, this.knobR, 0, Math.PI * 2); ctx.fillStyle = "#fff"; ctx.fill();
+    }
+
+    // botones
+    for (const b of this.buttons) {
+      const on = pressed.has(b.a);
+      const rr = b.r * (on ? 0.93 : 1);
+      if (b.a === "special") { this.drawSpecial(ctx, b.x, b.y, b.r, on); continue; }
+      const alpha = on ? 240 / 255 : 165 / 255;
+      if (!this.face(ctx, "t_" + b.a, b.x, b.y, rr, alpha)) this.fallbackDisc(ctx, b.a, b.x, b.y, rr, alpha);
+    }
+
     // pausa
     const pp = this.pausePos;
-    if (!img("t_pause", pp.x, pp.y, pp.r * 2, 0.8)) {
-      ctx.globalAlpha = 0.75;
-      ctx.beginPath(); ctx.arc(pp.x, pp.y, pp.r, 0, Math.PI * 2);
-      ctx.fillStyle = "#1c1c24"; ctx.fill();
-      ctx.lineWidth = 2; ctx.strokeStyle = "#fff"; ctx.stroke();
-      ctx.fillStyle = "#fff";
-      ctx.fillRect(pp.x - 7, pp.y - 8, 5, 16); ctx.fillRect(pp.x + 2, pp.y - 8, 5, 16);
-    }
-    // joystick (aparece donde apoyás el dedo; si no, queda de guía en su lugar)
-    const jr = this.R * 1.4;
-    const base = this.joy ? { x: this.joy.bx, y: this.joy.by } : this.joyHome;
-    let kx = base.x, ky = base.y;
-    if (this.joy) {
-      const dx = this.joy.x - this.joy.bx, dy = this.joy.y - this.joy.by;
-      const d = Math.hypot(dx, dy), m = Math.min(d, jr);
-      kx += d ? (dx / d) * m : 0; ky += d ? (dy / d) * m : 0;
-    }
-    const ja = this.joy ? 0.85 : 0.45;
-    if (!img("t_joy_base", base.x, base.y, jr * 2, ja)) {
-      ctx.globalAlpha = ja * 0.5;
-      ctx.beginPath(); ctx.arc(base.x, base.y, jr, 0, Math.PI * 2);
-      ctx.fillStyle = "#fff"; ctx.fill();
-    }
-    if (!img("t_joy_knob", kx, ky, jr, ja)) {
-      ctx.globalAlpha = ja;
-      ctx.beginPath(); ctx.arc(kx, ky, jr * 0.5, 0, Math.PI * 2);
-      ctx.fillStyle = "#fff"; ctx.fill();
-    }
-    // botones
-    const pressed = new Set([...this.pointers.values()].filter((p) => p.kind === "btn").map((p) => p.a));
-    for (const b of BUTTONS) {
-      const p = this.btnPos[b.a];
-      const on = pressed.has(b.a);
-      const ready = b.a !== "special" || this.specialCharge >= C.SPECIAL_HITS_REQUIRED;
-      const r = this.R * (on ? 0.92 : 1);
-      const key = b.a === "special" ? (ready ? "t_special" : "t_special_locked") : "t_" + b.a;
-      if (b.a === "special" && ready) {
-        // brillo del especial habilitado
-        ctx.globalAlpha = 0.35 + 0.25 * Math.sin(performance.now() / 150);
-        ctx.beginPath(); ctx.arc(p.x, p.y, this.R * 1.25, 0, Math.PI * 2);
-        ctx.fillStyle = "#ffd040"; ctx.fill();
-      }
-      if (!img(key, p.x, p.y, r * 2, on ? 1 : 0.7)) {
-        ctx.globalAlpha = on ? 0.9 : ready ? 0.62 : 0.32;
-        ctx.beginPath(); ctx.arc(p.x, p.y, r, 0, Math.PI * 2);
-        ctx.fillStyle = b.color; ctx.fill();
-        ctx.lineWidth = 3; ctx.strokeStyle = "rgba(255,255,255,0.9)"; ctx.stroke();
-        ctx.globalAlpha = 1;
-        text(ctx, b.label, p.x, p.y + 1, { size: 13 * (this.R / 36), shadow: false });
-      }
-      if (b.a === "special" && !ready) {
-        // aro de carga de 5 partes
-        ctx.globalAlpha = 0.95;
-        ctx.lineWidth = Math.max(4, this.R * 0.13);
-        const n = C.SPECIAL_HITS_REQUIRED, gap = 0.12;
-        for (let i = 0; i < n; i++) {
-          const a0 = -Math.PI / 2 + (i / n) * Math.PI * 2 + gap / 2;
-          const a1 = -Math.PI / 2 + ((i + 1) / n) * Math.PI * 2 - gap / 2;
-          ctx.beginPath(); ctx.arc(p.x, p.y, this.R + ctx.lineWidth, a0, a1);
-          ctx.strokeStyle = i < this.specialCharge ? "#ffd040" : "rgba(255,255,255,0.3)";
-          ctx.stroke();
-        }
-      }
-    }
+    if (!this.face(ctx, "t_pause", pp.x, pp.y, pp.r, 165 / 255)) this.fallbackDisc(ctx, "start", pp.x, pp.y, pp.r, 0.65);
     ctx.restore();
+  }
+
+  drawSpecial(ctx, bx, by, r, on) {
+    const req = C.SPECIAL_HITS_REQUIRED;
+    const charge = Math.max(0, Math.min(req, this.specialCharge));
+    const ready = charge >= req;
+    const rr = r * (on ? 0.93 : 1);
+    const cx = bx + SPECIAL_DISC.ox * rr, cy = by + SPECIAL_DISC.oy * rr;
+    const discR = SPECIAL_DISC.fr * rr;
+    const width = Math.max(3, this.u(5));
+    if (ready) {
+      const pulse = 0.5 + 0.5 * Math.sin((performance.now() / 1000) * 7);
+      ctx.globalAlpha = (60 + 50 * pulse) / 255;
+      ctx.beginPath(); ctx.arc(cx, cy, discR + width + this.u(4 + 3 * pulse), 0, Math.PI * 2);
+      ctx.fillStyle = "rgb(255,220,60)"; ctx.fill();
+    }
+    const drawFace = () => {
+      const key = ready ? "t_special" : "t_special_locked";
+      const alpha = ready ? (on ? 245 : 215) / 255 : 165 / 255;
+      if (!this.face(ctx, key, bx, by, rr, alpha)) this.fallbackDisc(ctx, "special", bx, by, rr, ready ? alpha : 0.35);
+    };
+    // bloqueado: aro encima (se ve la carga); habilitado: aro detrás
+    if (!ready) drawFace();
+    const rIn = discR + this.u(1), rOut = rIn + width;
+    const seg = (2 * Math.PI) / req, gap = 0.10;
+    ctx.globalAlpha = 1;
+    for (let i = 0; i < req; i++) {
+      const a0 = -Math.PI / 2 + i * seg + gap / 2, a1 = a0 + seg - gap;
+      ctx.beginPath();
+      ctx.arc(cx, cy, rOut, a0, a1);
+      ctx.arc(cx, cy, rIn, a1, a0, true);
+      ctx.closePath();
+      ctx.fillStyle = i < charge ? "rgb(255,215,50)" : "rgb(55,55,65)";
+      ctx.fill();
+    }
+    if (ready) drawFace();
   }
 }
