@@ -60,43 +60,60 @@ app.touchVisible = () => {
 // 16:9 (celulares), el ancho lógico crece (se ve más escenario); si es
 // más angosta, se agregan franjas.
 // ---------------------------------------------------------------------
+// El juego SIEMPRE se ve en horizontal. Si el celular está en vertical,
+// el lienzo (y el panel de compartir) se dibujan girados 90°: alcanza con
+// mirar el teléfono de costado, sin depender de la rotación automática.
+// En Android, además, al entrar a pantalla completa se traba la pantalla
+// en horizontal (ver enterFullscreen).
+const stage = document.getElementById("stage");
 function resize() {
   const W = window.innerWidth, H = window.innerHeight;
   const dpr = Math.min(window.devicePixelRatio || 1, 2);
-  const aspect = W / H;
   const v = app.view;
-  // Celular en vertical: el juego va arriba (16:9 a todo el ancho) y
-  // los controles táctiles en la zona de abajo -- no hace falta girarlo.
-  v.portrait = app.isTouchDevice && aspect < 1;
-  let vw = C.BASE_W, scale, fullH = C.BASE_H, oy = 0;
-  if (v.portrait) {
-    scale = W / C.BASE_W;
-    fullH = H / scale;
-    oy = Math.max(20, Math.min(160, (fullH - C.BASE_H) * 0.12));
-  } else if (aspect >= C.BASE_W / C.BASE_H) {
-    scale = H / C.BASE_H;
-    vw = Math.min(W / scale, C.BASE_H * 2.4);
+  const rotated = app.isTouchDevice && H > W;
+  const LW = rotated ? H : W, LH = rotated ? W : H;   // pantalla "acostada"
+  const aspect = LW / LH;
+  let vw = C.BASE_W, scale;
+  if (aspect >= C.BASE_W / C.BASE_H) {
+    scale = LH / C.BASE_H;
+    vw = Math.min(LW / scale, C.BASE_H * 2.4);
   } else {
-    scale = W / C.BASE_W;
+    scale = LW / C.BASE_W;
   }
-  const cssW = vw * scale, cssH = fullH * scale;
+  const cssW = vw * scale, cssH = C.BASE_H * scale;
+  stage.style.width = `${cssW}px`;
+  stage.style.height = `${cssH}px`;
   canvas.style.width = `${cssW}px`;
   canvas.style.height = `${cssH}px`;
   canvas.width = Math.round(cssW * dpr);
   canvas.height = Math.round(cssH * dpr);
+  if (rotated) {
+    // girado 90° horario: arriba del juego = borde derecho de la pantalla
+    v.tx = (W + cssH) / 2;
+    v.ty = (H - cssW) / 2;
+    stage.style.transform = `translate(${v.tx}px, ${v.ty}px) rotate(90deg)`;
+  } else {
+    v.tx = (W - cssW) / 2;
+    v.ty = (H - cssH) / 2;
+    stage.style.transform = `translate(${v.tx}px, ${v.ty}px)`;
+  }
+  v.rotated = rotated;
+  v.cssW = cssW;
+  v.cssH = cssH;
   v.w = vw;
   v.pad = (vw - C.BASE_W) / 2;
   v.scale = scale * dpr;
   v.css = scale;
-  v.fullH = fullH;
-  v.oy = oy;
+  v.fullH = C.BASE_H;
+  v.oy = 0;
+  v.portrait = false;
   app.touch.scale = (app.settings.touchScale || 100) / 100;
   app.touch.layoutFor(v);
-  document.body.classList.toggle("portrait", !!v.portrait);
 }
 window.addEventListener("resize", resize);
 document.addEventListener("fullscreenchange", () => setTimeout(resize, 100));
 window.addEventListener("orientationchange", () => setTimeout(resize, 200));
+if (screen.orientation) screen.orientation.addEventListener("change", () => setTimeout(resize, 150));
 app.relayout = resize;
 
 // ---------------------------------------------------------------------
@@ -104,8 +121,11 @@ app.relayout = resize;
 // ---------------------------------------------------------------------
 // coordenadas del lienzo completo (y de 0 a fullH)
 function toLogical(e) {
-  const r = canvas.getBoundingClientRect();
-  return { x: ((e.clientX - r.left) / r.width) * app.view.w, y: ((e.clientY - r.top) / r.height) * app.view.fullH };
+  const v = app.view;
+  let cx, cy; // coordenadas dentro del lienzo, en px CSS (sin girar)
+  if (v.rotated) { cx = e.clientY - v.ty; cy = v.tx - e.clientX; }
+  else { cx = e.clientX - v.tx; cy = e.clientY - v.ty; }
+  return { x: (cx / v.cssW) * v.w, y: (cy / v.cssH) * v.fullH };
 }
 canvas.addEventListener("pointerdown", (e) => {
   e.preventDefault();
@@ -132,10 +152,15 @@ canvas.addEventListener("contextmenu", (e) => e.preventDefault());
 app.enterFullscreen = async () => {
   const el = document.documentElement;
   try {
-    // sin bloquear la orientación: se juega en vertical u horizontal
     if (!document.fullscreenElement) {
       if (el.requestFullscreen) await el.requestFullscreen({ navigationUI: "hide" });
       else if (el.webkitRequestFullscreen) el.webkitRequestFullscreen();
+    }
+    // Android: trabar en horizontal (la pantalla gira sola aunque el
+    // celular esté en vertical). Donde no se puede (iPhone), queda el
+    // lienzo girado por CSS.
+    if (app.isTouchDevice && screen.orientation && screen.orientation.lock) {
+      await screen.orientation.lock("landscape").catch(() => {});
     }
   } catch (e) { /* no soportado (iPhone) */ }
 };
@@ -178,7 +203,6 @@ function draw() {
   UI.clearHits();
   ctx.fillStyle = "#000";
   ctx.fillRect(0, 0, v.w, v.fullH);
-  if (v.portrait) drawPortraitFrame(v);
   ctx.save();
   ctx.translate(0, v.oy);
   ctx.beginPath(); ctx.rect(0, 0, v.w, C.BASE_H); ctx.clip();
@@ -200,20 +224,6 @@ function draw() {
   ctx.restore();
 }
 
-// Vertical: fondo de la zona de controles (debajo del juego)
-function drawPortraitFrame(v) {
-  const bg = UI.IMG.select_bg;
-  if (bg) {
-    UI.drawImageCover(ctx, bg, 0, 0, v.w, v.fullH);
-    ctx.fillStyle = "rgba(0,0,0,0.55)";
-    ctx.fillRect(0, 0, v.w, v.fullH);
-  }
-  ctx.fillStyle = "#000";
-  ctx.fillRect(0, v.oy - 4, v.w, C.BASE_H + 8);
-  if (!app.touch.visible || !app.touch.fightMode) {
-    UI.text(ctx, "Girá el celular para jugar más grande", v.w / 2, v.oy + C.BASE_H + 80, { size: 30, color: "#bbb" });
-  }
-}
 
 // ---------------------------------------------------------------------
 async function boot() {

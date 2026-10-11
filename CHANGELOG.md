@@ -1,5 +1,10 @@
 # Cambios
 
+## V.0.3
+- En celular el juego siempre se ve en horizontal: en vertical se dibuja ya girado (sin pedir que
+  gires el teléfono ni depender de la rotación automática). En Android, al primer toque entra en
+  pantalla completa y traba la pantalla en horizontal. Se sacó el modo vertical de la V.0.2.
+
 ## V.0.2
 - Interfaz visual de Mortal Kompa: logo (con cinta "POLÍTICO"), fondos de título / selección /
   torre, marco de vida, timer, puntitos de rounds y especial, cartel de K.O., íconos de

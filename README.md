@@ -1,4 +1,4 @@
-# Mortal Kompa Político — V.0.2
+# Mortal Kompa Político — V.0.3
 
 Juego de pelea en el navegador, hermano de Mortal Kompa: misma jugabilidad,
 luchadores de la política argentina. No se instala: se juega desde una página
@@ -10,12 +10,13 @@ web (PC, celular o tablet).
   - J2: flechas · `1` puño · `2` patada · `3` a distancia · `4` cubrirse · `5` especial (fila de números o teclado numérico).
   - Joystick: □/X puño · ✕/A patada · ○/B distancia · △/Y especial · R1/RB cubrirse · START pausa.
   - Las teclas se cambian en Opciones > Controles.
-- **Celular:** el juego lo detecta solo y muestra joystick + botones en pantalla. Se puede
-  jugar **en vertical** (el juego arriba y los controles abajo) o en horizontal (más grande).
-  Al primer toque se pasa a **pantalla completa** (Android). En iPhone, Safari no permite
-  pantalla completa en páginas: usá *Compartir > Agregar a pantalla de inicio* y abrilo desde ese ícono. Si conectás
-  un joystick por Bluetooth, los botones táctiles se esconden y se juega con el joystick
-  (con dos joysticks se puede jugar de a dos en el mismo celular).
+- **Celular:** el juego lo detecta solo y muestra joystick + botones en pantalla. Siempre se ve
+  **en horizontal**: si el celular está en vertical, el juego aparece ya acostado (solo hay que
+  mirarlo de costado, no depende de la rotación automática). Al primer toque pasa a **pantalla
+  completa** y, en Android, la pantalla queda trabada en horizontal. En iPhone, Safari no permite
+  pantalla completa en páginas: *Compartir > Agregar a pantalla de inicio* y abrilo desde ese ícono.
+  Si conectás un joystick por Bluetooth, los botones táctiles se esconden (con dos joysticks se
+  juega de a dos en el mismo celular).
 - El **Especial** se habilita después de recibir 5 golpes. 2% de golpes críticos en puño/patada.
   Muerte súbita si empatan 1 a 1. Flawless si ganás un round sin perder vida.
 - **Escenario secreto:** en la elección de escenario, apretá START / ENTER.

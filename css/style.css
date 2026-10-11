@@ -18,9 +18,6 @@ html, body {
 }
 
 body {
-  display: flex;
-  align-items: center;
-  justify-content: center;
   font-family: "Roboto Black", "Arial Black", sans-serif;
 }
 
@@ -32,11 +29,18 @@ canvas#game {
 
 .hidden { display: none !important; }
 
-#share {
+#stage {
   position: fixed;
-  right: max(16px, 3vw);
+  left: 0;
+  top: 0;
+  transform-origin: 0 0;
+}
+
+#share {
+  position: absolute;
+  right: 3%;
   top: 16%;
-  width: min(44vw, 400px);
+  width: min(44%, 400px);
   background: rgba(16, 18, 30, 0.94);
   border: 2px solid #f0c828;
   border-radius: 14px;
@@ -87,11 +91,3 @@ canvas#game {
   #share button, #share .btn { padding: 7px 10px; font-size: 13px; }
 }
 
-body.portrait #share {
-  top: auto;
-  bottom: 3%;
-  left: 4%;
-  right: 4%;
-  width: auto;
-  font-size: 16px;
-}
