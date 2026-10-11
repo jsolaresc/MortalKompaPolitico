@@ -29,6 +29,9 @@ import sys
 
 from PIL import Image, ImageDraw, ImageFilter, ImageFont
 
+sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+import especiales_placeholder as SP  # noqa: E402
+
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 CHAR_ASSETS = os.path.join(ROOT, "assets", "characters")
 CHAR_DATA = os.path.join(ROOT, "data", "characters")
@@ -382,13 +385,13 @@ def animations():
         P(lean=-18, fl=(76, 76), bl=(-6, -6), fa=(50, 160), ba=(-40, 120)),
         P(lean=-6, fl=(40, 0), fa=(35, 150)),
     ]
+    # especial = gesto de MANDO (señala hacia adelante); el ataque lo hace
+    # la invocación (ver tools/especiales_placeholder.py y js/specials.js)
     A["special"] = [
-        P(lean=-8, fa=(-40, 120), ba=(-50, 110)),
-        P(lean=-12, fa=(-70, 160), ba=(-60, 150), effect="glow"),
-        P(lean=4, fa=(20, 160), ba=(10, 150), effect="glow"),
-        P(lean=22, fa=(80, 82), ba=(70, 78), fl=(30, 8), bl=(-26, -10), effect="glow"),
-        P(lean=24, fa=(84, 86), ba=(74, 80), fl=(32, 8), bl=(-28, -10), effect="glow"),
-        P(lean=10, fa=(40, 130), ba=(20, 140)),
+        P(lean=-6, fa=(-30, 100), ba=(10, 140)),
+        P(lean=-10, fa=(140, 175), ba=(5, 130), head=-6),
+        P(lean=6, fa=(92, 96), ba=(0, 150), fl=(22, 4), bl=(-18, -8)),
+        P(lean=6, fa=(94, 98), ba=(0, 150), fl=(22, 4), bl=(-18, -8)),
     ]
     A["ranged"] = [
         P(lean=-6, fa=(-60, -160), ba=(30, 150)),
@@ -442,8 +445,8 @@ def anim_config(ch, frames_count):
                   "active_frames": [1, 2]},
         "kick": {"fps": 14, "loop": False, "damage": 12, "reach": 115, "hit_height": 72, "hit_offset_y": 83,
                  "active_frames": [2]},
-        "special": {"fps": 14, "loop": False, "damage": 20, "reach": 115, "hit_height": 88, "hit_offset_y": 94,
-                    "active_frames": [3, 4]},
+        "special": {"fps": 8, "loop": False, "active_frames": [2],
+                    "_comentario": "Gesto de mando: en el cuadro activo aparece la invocación (bloque 'special' del JSON)."},
         "ranged": ranged,
         "ranged_crouch": dict(ranged, launch_height="crouch_mid", trajectory="straight"),
         "crouch": {"fps": 6, "loop": True},
@@ -539,6 +542,8 @@ def generate_character(ch):
     make_portrait(ch, idle0).save(os.path.join(base, "selection.png"), optimize=True)
     pose_img = idle0.crop(idle0.getbbox())
     pose_img.save(os.path.join(base, "pose.png"), optimize=True)
+    SP.make_fx(slug, base)
+    sfx_path = SP.make_sfx(slug, base)
     pfolder = os.path.join(base, "projectile")
     os.makedirs(pfolder, exist_ok=True)
     for i, fr in enumerate(make_projectile(ch)):
@@ -556,7 +561,11 @@ def generate_character(ch):
         "projectile_scale": 0.5,
         "accent": "#%02x%02x%02x" % ch["accent"],
         "animations": anim_config(ch, counts),
-        "sounds": {},
+        "special": SP.SPECIALS[slug],
+        "sounds": {
+            "_comentario": "special = voz del personaje comandando el ataque (grabala y ponela acá); special_sfx = efecto de la invocación (rugido, agua...).",
+            "special_sfx": [sfx_path],
+        },
     }
     os.makedirs(CHAR_DATA, exist_ok=True)
     with open(json_path, "w", encoding="utf-8") as fh:

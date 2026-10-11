@@ -144,11 +144,21 @@ export function loadCharacterFrames(slug) {
         jobs.push(loadImageSync(`${folder}/projectile/${i}.png`).then((img) => { projectile[i] = img; }));
       }
     }
+    // especial "externo": special_fx/<parte>/0.png... ("special": {"fx": {"main": 4}})
+    const specialFx = {};
+    const fxCfg = (data.special && data.special.fx) || {};
+    for (const [part, count] of Object.entries(fxCfg)) {
+      specialFx[part] = new Array(count).fill(null);
+      for (let i = 0; i < count; i++) {
+        jobs.push(loadImageSync(`${folder}/special_fx/${part}/${i}.png`).then((img) => { specialFx[part][i] = img; }));
+      }
+    }
     await Promise.all(jobs);
+    for (const k of Object.keys(specialFx)) specialFx[k] = specialFx[k].filter(Boolean);
     for (const k of Object.keys(anims)) anims[k] = anims[k].filter(Boolean);
     if (Array.isArray(data.projectile_groups)) projectile = projectile.map((g) => g.filter(Boolean)).filter((g) => g.length);
     else projectile = projectile.filter(Boolean);
-    return { anims, projectile, folder };
+    return { anims, projectile, folder, specialFx };
   })();
   charFrameCache.set(slug, p);
   return p;

@@ -1,5 +1,15 @@
 # Cambios
 
+## V.0.5
+- Nuevos ataques especiales "externos": el luchador da una orden y aparece una invocación que
+  ataca sola. 17% de daño (4% cubriéndose) y se pueden esquivar.
+  Milei: león · Cristina: satélite con lásers · Bullrich: bomba de 2 s con daño en área ·
+  Macri: ola de agua · Massa: ola de billetes · Bregman: tanque que dispara un cohete ·
+  Kicillof: movilización de la UOCRA · Alberto y Scioli: provisorios (notas musicales / lancha).
+- Sprites y efectos de sonido provisorios para cada invocación; lugar para la voz de cada
+  personaje comandando el ataque.
+- La CPU usa el especial a cualquier distancia y trata de esquivar/cubrirse de los del rival.
+
 ## V.0.4
 - Controles táctiles con la misma ubicación, tamaño y comportamiento que Mortal Kompa Android
   (abanico de botones para el pulgar, joystick flotante en la mitad izquierda, especial con

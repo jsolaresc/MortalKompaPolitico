@@ -51,17 +51,13 @@
       "frames": 4
     },
     "special": {
-      "fps": 14,
+      "fps": 8,
       "loop": false,
-      "damage": 20,
-      "reach": 115,
-      "hit_height": 88,
-      "hit_offset_y": 94,
       "active_frames": [
-        3,
-        4
+        2
       ],
-      "frames": 6
+      "_comentario": "Gesto de mando: en el cuadro activo aparece la invocación (bloque 'special' del JSON).",
+      "frames": 4
     },
     "ranged": {
       "fps": 14,
@@ -115,5 +111,26 @@
       "frames": 4
     }
   },
-  "sounds": {}
+  "special": {
+    "_que_es": "Baja un satélite hasta la altura de los nombres y dispara lásers al rival (se esquivan moviéndose).",
+    "type": "satellite",
+    "draw_h": 70,
+    "hover_y": 88,
+    "shots": 3,
+    "aim_time": 0.55,
+    "lock_time": 0.35,
+    "beam_time": 0.28,
+    "beam_w": 46,
+    "fx": {
+      "main": 2
+    },
+    "fx_fps": 6,
+    "sfx_on": "fire"
+  },
+  "sounds": {
+    "_comentario": "special = voz del personaje comandando el ataque (grabala y ponela acá); special_sfx = efecto de la invocación (rugido, agua...).",
+    "special_sfx": [
+      "sounds/special_sfx.wav"
+    ]
+  }
 }

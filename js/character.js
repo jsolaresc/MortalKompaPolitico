@@ -69,6 +69,8 @@ export class Character {
     this.jumpPower = data.jump_power ?? C.JUMP_POWER_DEFAULT;
     this.animData = data.animations || {};
     this.projectileFrames = frames.projectile;
+    this.specialFx = frames.specialFx || {};
+    this.summonSpawned = false;
     this.soundPools = this.buildSoundPools();
 
     this.animations = {};
@@ -168,7 +170,7 @@ export class Character {
     this.animations[newState].reset();
     this.attackHasHit = false;
     this.projectileSpawned = false;
-    if (newState === S.SPECIAL) this.specialMissChecked = false;
+    if (newState === S.SPECIAL) { this.specialMissChecked = false; this.summonSpawned = false; }
     if (newState === S.WIN) { this.velX = 0; this.velY = 0; }
     const sk = { [S.PUNCH]: "punch", [S.KICK]: "kick", [S.SPECIAL]: "special" }[newState];
     if (sk) this.playCharacterSound(sk);
@@ -258,7 +260,7 @@ export class Character {
     const anim = this.animations[this.state];
     if (anim && this.state !== S.KO) anim.update(dt);
 
-    if (this.state === S.SPECIAL && anim && !this.attackHasHit && !this.specialMissChecked) {
+    if (this.state === S.SPECIAL && anim && !this.attackHasHit && !this.specialMissChecked && !this.data.special) {
       const active = (this.animData[S.SPECIAL] || {}).active_frames || [];
       if (active.length) {
         const mx = Math.max(...active);
@@ -311,6 +313,7 @@ export class Character {
     if (!ATTACK_STATES.has(this.state)) return null;
     const cfg = this.animData[this.state] || {};
     if ((this.state === S.RANGED || this.state === S.RANGED_CROUCH) && !cfg.melee_whip) return null;
+    if (this.state === S.SPECIAL && this.data.special) return null; // el especial lo hace la invocación
     const active = cfg.active_frames || [];
     if (!active.includes(this.animations[this.state].index)) return null;
     const reach = cfg.reach ?? 70;
@@ -369,6 +372,44 @@ export class Character {
       bounceDamping: cfg.bounce_damping ?? 0.55, launchVelY, gravityMult: gm,
       visualYOffset: cfg.visual_y_offset ?? 0, scale: this.data.projectile_scale ?? 1, loopSound: !!cfg.loop_sound,
     };
+  }
+
+  // ¿Es el cuadro en que el gesto de mando suelta la invocación?
+  getSpecialLaunch() {
+    if (this.state !== S.SPECIAL || this.summonSpawned || !this.data.special) return false;
+    const cfg = this.animData[S.SPECIAL] || {};
+    const active = cfg.active_frames || [1];
+    if (!active.includes(this.animations[S.SPECIAL].index)) return false;
+    this.summonSpawned = true;
+    return true;
+  }
+
+  // Golpe de una invocación: fracción de la vida máxima (17% / 4% cubriéndose)
+  receiveSpecial(frac, dir) {
+    if (this.knockedOut) return;
+    this.hitsTakenSinceSpecial = Math.min(C.SPECIAL_HITS_REQUIRED, this.hitsTakenSinceSpecial + 1);
+    const damage = this.maxHealth * frac;
+    let knockback = 14;
+    if (this.blocking) {
+      knockback *= 0.3;
+      if (!this.playCharacterSound("block", 0.8)) audio.playSfx("block_impact", 0.8);
+    } else {
+      audio.playSfx("hit_impact", 1);
+      this.playCharacterSound("hit", 1, C.VOICE_LINE_CHANCE, true);
+    }
+    this.health = Math.max(0, this.health - damage);
+    this.velX = dir * knockback;
+    this.hitFlashTimer = 0.12;
+    if (this.health <= 0) {
+      this.knockedOut = true;
+      this.onGround = false;
+      this.koBounces = 0;
+      this.koSettled = false;
+      this.velY = -17;
+      this.velX = dir * Math.max(knockback, 10) * 1.4;
+      this.setState(S.KO, true);
+      this.playVoice("ko");
+    }
   }
 
   receiveHit(damage, knockback = 12, critical = false) {

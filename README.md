@@ -1,4 +1,4 @@
-# Mortal Kompa Político — V.0.4
+# Mortal Kompa Político — V.0.5
 
 Juego de pelea en el navegador, hermano de Mortal Kompa: misma jugabilidad,
 luchadores de la política argentina. No se instala: se juega desde una página
@@ -17,7 +17,10 @@ web (PC, celular o tablet).
   pantalla completa en páginas: *Compartir > Agregar a pantalla de inicio* y abrilo desde ese ícono.
   Si conectás un joystick por Bluetooth, los botones táctiles se esconden (con dos joysticks se
   juega de a dos en el mismo celular).
-- El **Especial** se habilita después de recibir 5 golpes. 2% de golpes críticos en puño/patada.
+- El **Especial** se habilita después de recibir 5 golpes. No es un golpe: el luchador da una orden
+  y aparece algo que ataca solo (un león, una ola, un satélite...). Saca **17%** de vida, **4%** si
+  el rival se cubre, y se puede **esquivar** (saltando lo que viene por el piso, agachándose ante el
+  cohete del tanque, alejándose del láser o de la bomba). 2% de golpes críticos en puño/patada.
   Muerte súbita si empatan 1 a 1. Flawless si ganás un round sin perder vida.
 - **Escenario secreto:** en la elección de escenario, apretá START / ENTER.
 
@@ -73,6 +76,32 @@ Los 9 políticos son **maniquíes provisorios** dibujados por código
    (rutas relativas a la carpeta del personaje). Voz del locutor diciendo el nombre:
    `"announcer": "sounds/nombre.wav"`.
 4. Para sumar un luchador nuevo: copiá un JSON y su carpeta, y agregalo en `data/roster.json`.
+
+## Ataques especiales
+Se configuran en el JSON de cada personaje, bloque `"special"` (`js/specials.js` explica todo):
+
+| Personaje | Especial | Tipo |
+|---|---|---|
+| Milei | León que entra desde atrás y cruza corriendo | `rush` (offscreen) |
+| Cristina | Satélite que baja y dispara lásers | `satellite` |
+| Bullrich | Bomba que explota a los 2 s, daño en área | `bomb` |
+| Macri | Ola de agua desde atrás suyo | `rush` (behind) |
+| Massa | Ola de billetes de pesos | `rush` (behind) |
+| Bregman | Tanque que aparece detrás, dispara un cohete y se va | `tank` |
+| Kicillof | Movilización de la UOCRA | `rush` (offscreen) |
+| Alberto | *Provisorio:* ola de notas musicales | `rush` (behind) |
+| Scioli | *Provisorio:* lancha | `rush` (offscreen) |
+
+- Sprites: `assets/characters/<nombre>/special_fx/main/0.png, 1.png...` (el tanque además
+  `special_fx/rocket/`). Cantidad de cuadros en `"fx": {"main": 4}`; alto en pantalla con `"draw_h"`;
+  caja de golpe con `"hit_w"`/`"hit_h"`; velocidad con `"speed"`. Dibujados mirando a la derecha.
+- La animación `special` del luchador es el **gesto de mando** (señalar); la invocación aparece en
+  su cuadro activo (`active_frames`).
+- Audios (2 por especial): `"sounds": {"special": ["sounds/voz_orden.mp3"], "special_sfx": ["sounds/rugido.mp3"]}`.
+  `special` = voz del personaje comandando (suena al empezar el gesto), `special_sfx` = efecto
+  (rugido, agua...). Cuándo suena el efecto: `"sfx_on"`: `spawn` (al aparecer), `fire` (al disparar)
+  o `explode` (al explotar). Los efectos actuales son provisorios (sintetizados); las voces faltan.
+- Daño: `SPECIAL_SUMMON_DAMAGE` / `SPECIAL_SUMMON_BLOCKED` en `js/config.js`.
 
 ## Escenarios y música
 - `data/stages.json`: nombre, imagen (`.png/.jpg/.webp`) o **video** (`.mp4/.webm`, en loop y

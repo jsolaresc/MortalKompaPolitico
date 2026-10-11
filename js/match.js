@@ -13,6 +13,7 @@ import { Character } from "./character.js";
 import { Projectile } from "./projectile.js";
 import { drawFighterFrame } from "./character.js";
 import { drawProjectile } from "./projectile.js";
+import { Summon, drawSummon } from "./specials.js";
 import * as UI from "./ui.js";
 
 function overlap(a, b) {
@@ -39,6 +40,7 @@ export class Match {
     this.boss = opts.boss || null;
     this.names = opts.names || null;
     this.projectiles = [];
+    this.summons = [];
     this.wins = [0, 0];
     this.roundNumber = 1;
     this.suddenDeath = false;
@@ -70,6 +72,7 @@ export class Match {
     if (this.boss) { b.mystery = true; b.name = this.boss.name; }
     this.projectiles.forEach((p) => audio.stopLoop(p.loopId));
     this.projectiles = [];
+    this.summons = [];
   }
 
   startIntro() {
@@ -141,6 +144,19 @@ export class Match {
     }
   }
 
+  spawnSummon(i) {
+    const me = this.f[i];
+    if (!me.getSpecialLaunch()) return;
+    const cam = this.stage ? this.stage.cameraX : 0;
+    this.summons.push(new Summon(me.data.special, me, this.f[1 - i], i, cam));
+  }
+
+  updateSummons(dt) {
+    const cam = this.stage ? this.stage.cameraX : 0;
+    for (const s of this.summons) s.update(dt, cam);
+    this.summons = this.summons.filter((s) => s.alive);
+  }
+
   queueWinAudio(names, delay = 1.05) {
     this.winAudioTimer = delay;
     this.winAudioQueue = [...names];
@@ -185,8 +201,8 @@ export class Match {
     } else if (this.phase === "fight") {
       this.timeLeft -= dt;
       const [ia, ib] = this.inputs;
-      if (ia.thinkFight) ia.thinkFight(dt, a, b);
-      if (ib.thinkFight) ib.thinkFight(dt, b, a);
+      if (ia.thinkFight) ia.thinkFight(dt, a, b, this);
+      if (ib.thinkFight) ib.thinkFight(dt, b, a, this);
       a.handleInput(ia, b.x);
       b.handleInput(ib, a.x);
       a.physicsUpdate(dt);
@@ -196,6 +212,9 @@ export class Match {
       this.resolveCombat(b, a);
       this.spawnProjectiles(a);
       this.spawnProjectiles(b);
+      this.spawnSummon(0);
+      this.spawnSummon(1);
+      this.updateSummons(dt);
       this.updateProjectiles(dt);
       if (this.timeLeft <= 0 || a.knockedOut || b.knockedOut) this.endRound();
     } else if (this.phase === "roundEnd") {
@@ -233,6 +252,7 @@ export class Match {
     }
     this.projectiles.forEach((p) => audio.stopLoop(p.loopId));
     this.projectiles = [];
+    this.summons = [];
     this.roundEndTimer = Math.max(2.8, this.winAudioDuration());
     this.phase = "roundEnd";
     this.phaseT = 0;
@@ -281,6 +301,7 @@ export class Match {
       f: this.f.map((c) => [c.state, c.animations[c.state].index, r1(c.x), r1(c.y), c.facing,
         c.hitFlashTimer > 0 ? 1 : 0, c.mystery ? 1 : 0, Math.round(c.health * 10) / 10, c.hitsTakenSinceSpecial, c.name]),
       pr: this.projectiles.map((p) => [p.ownerIndex, p.group, p.frameIndex, r1(p.x), r1(p.y - p.visualYOffset), p.facing, r1(p.w), r1(p.h)]),
+      sm: this.summons.map((s) => s.snap()),
       win: this.winner,
     };
   }
@@ -310,6 +331,7 @@ export function drawSnapshot(ctx, view, s, chars, stage) {
     if (cfg.projectile_mode === "random" && frames.length && !Array.isArray(frames[0])) frames = [frames[p[1]] || frames[0]];
     drawProjectile(ctx, frames, p[2], p[3], p[4], p[5], p[6], p[7], cam, view.pad);
   }
+  for (const sm of s.sm || []) drawSummon(ctx, sm, chars[sm[0]], cam, view.pad);
   UI.drawHud(ctx, view, {
     f: s.f.map((d, i) => ({ name: d[9], health: d[7], maxHealth: chars[i].maxHealth, hits: d[8] })),
     time: s.tm, wins: s.w, t: performance.now() / 1000,

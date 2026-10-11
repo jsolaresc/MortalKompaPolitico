@@ -51,17 +51,13 @@
       "frames": 4
     },
     "special": {
-      "fps": 14,
+      "fps": 8,
       "loop": false,
-      "damage": 20,
-      "reach": 115,
-      "hit_height": 88,
-      "hit_offset_y": 94,
       "active_frames": [
-        3,
-        4
+        2
       ],
-      "frames": 6
+      "_comentario": "Gesto de mando: en el cuadro activo aparece la invocación (bloque 'special' del JSON).",
+      "frames": 4
     },
     "ranged": {
       "fps": 14,
@@ -115,5 +111,24 @@
       "frames": 4
     }
   },
-  "sounds": {}
+  "special": {
+    "_que_es": "PROVISORIO (a definir): una lancha cruza a toda velocidad.",
+    "type": "rush",
+    "spawn": "offscreen",
+    "draw_h": 110,
+    "hit_w": 150,
+    "hit_h": 90,
+    "speed": 15,
+    "fx": {
+      "main": 2
+    },
+    "fx_fps": 10,
+    "sfx_on": "spawn"
+  },
+  "sounds": {
+    "_comentario": "special = voz del personaje comandando el ataque (grabala y ponela acá); special_sfx = efecto de la invocación (rugido, agua...).",
+    "special_sfx": [
+      "sounds/special_sfx.wav"
+    ]
+  }
 }

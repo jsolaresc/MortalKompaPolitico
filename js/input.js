@@ -206,7 +206,7 @@ export class CPUInput extends InputState {
 
   clear() { const c = {}; for (const a of ACTIONS) c[a] = false; return c; }
 
-  thinkFight(dt, me, opp) {
+  thinkFight(dt, me, opp, match = null) {
     this.prev = { ...this.cur };
     this.timer -= dt;
     if (this.timer > 0) return;
@@ -245,6 +245,22 @@ export class CPUInput extends InputState {
       return;
     }
 
+    // especial disponible: lo usa a cualquier distancia (es una invocación)
+    if (me.hitsTakenSinceSpecial >= SPECIAL_HITS_REQUIRED && me.data && me.data.special && Math.random() < 0.18 + 0.3 * (this.difficulty / CPUInput.LEVELS)) {
+      s.special = true;
+      return;
+    }
+    // invocación enemiga en camino: saltar (si va por el piso) o cubrirse
+    const incoming = match && match.summons ? match.summons.find((sm) => sm.owner !== me && sm.alive && !sm.hit) : null;
+    if (incoming && Math.random() < this.blockChance) {
+      const dx = incoming.x - me.x;
+      const close = Math.abs(dx) < 260 && Math.sign(dx) === -incoming.dir;
+      if (incoming.type === "rush" && close && Math.random() < 0.55) { s.up = true; return; }
+      if (incoming.type === "satellite" || incoming.type === "bomb") {
+        s[incoming.x > me.x ? "left" : "right"] = true; return;
+      }
+      if (close || incoming.type === "tank") { s.block = true; return; }
+    }
     const threat = (oppMelee && distance < blockMelee) || oppRanged;
     if (threat && Math.random() < this.blockChance) { s.block = true; return; }
 
