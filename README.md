@@ -1,4 +1,8 @@
-# Mortal Kompa Político — V.0.6
+# Mortal Kompa — V.0.7
+
+Versión pública del juego (repo `MortalKompaPolitico`, luchadores de la política argentina). Para los
+jugadores se llama **Mortal Kompa** a secas; solo la app de Android se instala como **"MK Político"**
+(con su propio ícono) para poder tenerla junto a la versión familiar.
 
 Juego de pelea en el navegador, hermano de Mortal Kompa: misma jugabilidad,
 luchadores de la política argentina. No se instala: se juega desde una página

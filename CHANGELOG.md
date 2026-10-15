@@ -1,5 +1,11 @@
 # Cambios
 
+## V.0.7
+- El juego se llama **Mortal Kompa** a secas para los jugadores: sin la cinta "POLÍTICO" en el
+  logo, título de la página, ícono, vista previa al compartir y mensaje de invitación.
+- La app de Android sigue instalándose como "MK Político" (con la cinta en el ícono) para poder
+  tenerla junto a la versión familiar.
+
 ## V.0.6
 - Se copió la versión navegador actualizada de Mortal Kompa (jugabilidad, menús y apps):
   - Jugabilidad: golpe crítico = doble daño; daño fijo al cubrirse según el ataque (puño/patada

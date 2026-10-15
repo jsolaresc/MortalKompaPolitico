@@ -8,7 +8,7 @@
 // =====================================================================
 
 export const BRIDGE = typeof window !== "undefined" ? window.MKAndroid || null : null;
-export const APP_NAME = "Mortal Kompa Político";
+export const APP_NAME = "Mortal Kompa";
 export const IS_APP = !!BRIDGE;
 
 // Dirección pública del juego (para los links de invitación: desde la app

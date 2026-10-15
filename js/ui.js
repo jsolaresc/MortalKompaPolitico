@@ -125,20 +125,6 @@ export function logo(ctx, view, y = 120, scale = 1) {
   } else {
     text(ctx, "MORTAL KOMPA", 0, -10, { size: 74, color: "#f0c828", stroke: 10, strokeColor: "#3a1400" });
   }
-  // cinta "POLÍTICO" (celeste y blanca) debajo del logo de Mortal Kompa
-  ctx.save();
-  ctx.translate(150, 62);
-  ctx.rotate(-0.06);
-  roundRect(ctx, -120, -22, 240, 44, 8);
-  const g = ctx.createLinearGradient(0, -22, 0, 22);
-  g.addColorStop(0, "#8cc8f4"); g.addColorStop(0.5, "#ffffff"); g.addColorStop(1, "#6cb4ee");
-  ctx.fillStyle = g;
-  ctx.fill();
-  ctx.lineWidth = 4;
-  ctx.strokeStyle = "#1a1a22";
-  ctx.stroke();
-  text(ctx, "POLÍTICO", 0, 2, { size: 32, color: "#0b2340", shadow: false });
-  ctx.restore();
   ctx.restore();
 }
 

@@ -44,7 +44,7 @@ function showPanel({ link = null, app }) {
   linkBox.classList.remove("hidden");
   const input = document.getElementById("share-link");
   input.value = link;
-  const msg = `¡Te desafío a una pelea en Mortal Kompa Político! Entrá acá: ${link}`;
+  const msg = `¡Te desafío a una pelea en Mortal Kompa! Entrá acá: ${link}`;
   document.getElementById("share-copy").onclick = async () => {
     if (BRIDGE) { BRIDGE.copy(link); app.toast("¡Link copiado!"); return; }
     try { await navigator.clipboard.writeText(link); app.toast("¡Link copiado!"); }
@@ -54,7 +54,7 @@ function showPanel({ link = null, app }) {
   // donde casi nunca existe, abre WhatsApp con el mensaje armado
   document.getElementById("share-native").onclick = () => {
     if (BRIDGE) BRIDGE.share(msg);
-    else if (navigator.share) navigator.share({ title: "Mortal Kompa Político", text: msg, url: link }).catch(() => {});
+    else if (navigator.share) navigator.share({ title: "Mortal Kompa", text: msg, url: link }).catch(() => {});
     else window.open(`https://wa.me/?text=${encodeURIComponent(msg)}`, "_blank", "noopener");
   };
 }
