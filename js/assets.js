@@ -54,6 +54,7 @@ export const DB = {
   bySlug: {},
   stages: [],         // [{id, name, image, music, secret}]
   menuMusic: [],
+  menuVoices: [],
 };
 
 export async function loadDatabase() {
@@ -63,16 +64,20 @@ export async function loadDatabase() {
     loadJSON("data/music.json").catch(() => ({ menu: [] })),
   ]);
   DB.menuMusic = (music.menu || []).filter(Boolean);
+  DB.menuVoices = (music.menu_voices || []).filter(Boolean);
   DB.stages = stages.stages;
   const entries = await Promise.all(roster.characters.map(async (slug) => {
     try {
       const data = await loadJSON(`data/characters/${slug}.json`);
       const folder = data.sprite_folder || `assets/characters/${slug}`;
-      const [selection, pose] = await Promise.all([
+      const [selection, pose, pose2] = await Promise.all([
         loadImageSync(data.selection_image ? `${folder}/${data.selection_image}` : `${folder}/selection.png`),
         loadImageSync(data.pose_image ? `${folder}/${data.pose_image}` : `${folder}/pose.png`),
+        // pose2: foto aparte para el lado derecho (ej. ropa con texto, que
+        // espejada se leería al revés). Si no hay, se espeja la pose normal.
+        data.pose2_image ? loadImageSync(`${folder}/${data.pose2_image}`) : Promise.resolve(null),
       ]);
-      return { slug, name: data.name || slug, data, selection, pose, accent: data.accent || "#888888" };
+      return { slug, name: data.name || slug, data, selection, pose, pose2, accent: data.accent || "#888888" };
     } catch (e) {
       console.warn(`[AVISO] personaje '${slug}':`, e);
       return null;

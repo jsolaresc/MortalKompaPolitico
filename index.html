@@ -7,12 +7,20 @@
   <meta name="mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-status-bar-style" content="black-fullscreen">
-  <meta name="description" content="Mortal Kompa Político: juego de pelea de la política argentina. Jugá en el navegador, contra la CPU, de a dos o online con un link.">
+  <meta name="description" content="Mortal Kompa Político: juego de pelea de la política argentina. Jugá en el navegador o en el celular, contra la CPU, de a dos o online con un link.">
   <meta property="og:title" content="Mortal Kompa Político">
   <meta property="og:description" content="¡Te desafío a una pelea! Juego de pelea en el navegador.">
   <title>Mortal Kompa Político</title>
-  <link rel="icon" href="assets/ui/icon.png">
-  <link rel="apple-touch-icon" href="assets/ui/icon.png">
+  <link rel="icon" href="assets/ui/app_icon_192.png">
+  <link rel="apple-touch-icon" href="assets/ui/app_icon_192.png">
+  <meta property="og:type" content="website">
+  <meta property="og:site_name" content="Mortal Kompa Político">
+  <meta property="og:url" content="https://jsolaresc.github.io/MortalKompaPolitico/">
+  <meta property="og:image" content="https://jsolaresc.github.io/MortalKompaPolitico/assets/ui/share.jpg">
+  <meta property="og:image:width" content="1200">
+  <meta property="og:image:height" content="630">
+  <meta name="twitter:card" content="summary_large_image">
+  <meta name="twitter:image" content="https://jsolaresc.github.io/MortalKompaPolitico/assets/ui/share.jpg">
   <link rel="manifest" href="manifest.webmanifest">
   <link rel="stylesheet" href="css/style.css">
 </head>
@@ -25,16 +33,33 @@
       <input id="share-name" maxlength="16" placeholder="Ej: Joaquín" autocomplete="nickname">
     </label>
     <div id="share-link-box">
-      <div class="label">Link para invitar</div>
+      <div class="label">Link</div>
       <input id="share-link" readonly>
       <div class="buttons">
         <button id="share-copy" type="button">Copiar link</button>
-        <a id="share-wa" target="_blank" rel="noopener" class="btn wa">WhatsApp</a>
-        <a id="share-mail" class="btn mail">Mail</a>
-        <button id="share-native" type="button" class="hidden">Compartir…</button>
+        <button id="share-native" type="button">Compartir</button>
       </div>
-      <div class="note">Cualquiera que abra el link entra a tu sala.</div>
     </div>
+  </div>
+
+  <div id="join" class="hidden">
+    <div class="label">Código de la sala</div>
+    <input id="join-link" placeholder="Ej: ACM1PT" autocomplete="off" autocapitalize="characters" autocorrect="off" spellcheck="false">
+    <div class="buttons">
+      <button id="join-paste" type="button" class="secondary">Pegar</button>
+      <button id="join-go" type="button">Unirse</button>
+    </div>
+  </div>
+
+  <div id="install-ios" class="hidden">
+    <div class="title">Instalar en iPhone</div>
+    <ol>
+      <li>Abrí esta página en <b>Safari</b>.</li>
+      <li>Tocá <b>Compartir</b> (el cuadrado con la flecha hacia arriba).</li>
+      <li>Elegí <b>Agregar a pantalla de inicio</b>.</li>
+    </ol>
+    <div>Queda el ícono de Mortal Kompa Político: abrilo desde ahí y se juega en pantalla completa.</div>
+    <div class="buttons"><button type="button" onclick="document.getElementById('install-ios').classList.add('hidden')">Entendido</button></div>
   </div>
   </div>
 

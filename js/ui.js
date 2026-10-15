@@ -111,7 +111,8 @@ export function menuBackground(ctx, view, t = 0, bg = "select", dim = 0.35) {
 }
 
 export function title(ctx, view, str, y = 46, color = COLORS.yellow, size = 34) {
-  text(ctx, str, view.w / 2, y, { size, color, stroke: 6 });
+  const r = wrapText(ctx, str, size, textMaxW(view));
+  r.lines.forEach((l, i) => text(ctx, l, view.w / 2, y + i * r.size * 1.15, { size: r.size, color, stroke: 6 }));
 }
 
 export function logo(ctx, view, y = 120, scale = 1) {
@@ -193,6 +194,9 @@ function specialPips(ctx, x, y, hits, req, alignRight, t) {
 }
 
 export const hudOpts = { showSpecialPips: true };
+// En pantallas táctiles los menús se dibujan como "pastillas" separadas y
+// un poco más grandes (mismo criterio que la versión Android).
+export const menuOpts = { touch: false };
 
 /** hud = { f: [{name, health, maxHealth, hits}], time, wins:[a,b], t } */
 export function drawHud(ctx, view, hud) {
@@ -201,8 +205,11 @@ export function drawHud(ctx, view, hud) {
   const [a, b] = hud.f;
   healthBar(ctx, m, HUD_BAR_Y, barW, HUD_BAR_H, a.health / a.maxHealth, false);
   healthBar(ctx, view.w - m - barW, HUD_BAR_Y, barW, HUD_BAR_H, b.health / b.maxHealth, true);
-  text(ctx, a.name, m, HUD_NAME_Y + 8, { size: 18, align: "left" });
-  text(ctx, b.name, view.w - m, HUD_NAME_Y + 8, { size: 18, align: "right" });
+  // nombres largos: se achica la letra para no pisar los pips del especial
+  const nameW = barW - (hudOpts.showSpecialPips ? 130 : 10);
+  const fit = (s) => { let z = 18; while (z > 11 && measure(ctx, s, z) > nameW) z -= 1; return z; };
+  text(ctx, a.name, m, HUD_NAME_Y + 8, { size: fit(a.name), align: "left" });
+  text(ctx, b.name, view.w - m, HUD_NAME_Y + 8, { size: fit(b.name), align: "right" });
   // con controles táctiles, el botón de Especial reemplaza a los pips
   if (hudOpts.showSpecialPips) {
     specialPips(ctx, m + barW - 3, HUD_NAME_Y + 8, a.hits, C.SPECIAL_HITS_REQUIRED, true, hud.t);
@@ -230,19 +237,51 @@ export function drawHud(ctx, view, hud) {
   text(ctx, String(Math.max(0, Math.floor(hud.time))), view.w / 2, HUD_BAR_Y + HUD_BAR_H / 2 + 1, { size: 30 });
 }
 
+// Parte un texto en renglones que entren en maxW (por palabras; si una
+// sola palabra no entra ni sola, achica la letra). Devuelve {lines, size}.
+export function wrapText(ctx, str, size, maxW, minSize = 18) {
+  const words = String(str).split(/[ \t\n]+/).filter(Boolean);   // el espacio duro (\u00a0) no corta
+  while (size > minSize && words.some((w) => measure(ctx, w, size) > maxW)) size -= 2;
+  const lines = [];
+  let cur = "";
+  for (const w of words) {
+    const t = cur ? cur + " " + w : w;
+    if (cur && measure(ctx, t, size) > maxW) { lines.push(cur); cur = w; } else cur = t;
+  }
+  if (cur) lines.push(cur);
+  return { lines, size };
+}
+function textMaxW(view) { return Math.min(view.w - 80, 900); }
+
 export function centerText(ctx, view, str, color = COLORS.white, yOff = 0, size = 64) {
-  text(ctx, str, view.w / 2, C.BASE_H / 2 + yOff, { size, color, stroke: 8 });
+  const r = wrapText(ctx, str, size, textMaxW(view));
+  const lh = r.size * 1.12;
+  const y0 = C.BASE_H / 2 + yOff - ((r.lines.length - 1) * lh) / 2;
+  r.lines.forEach((l, i) => text(ctx, l, view.w / 2, y0 + i * lh, { size: r.size, color, shadow: false }));
+}
+
+// título de pantalla como el de PC: sombra negra suave, sin contorno.
+// Si no entra en un renglón, sigue en los de abajo.
+export function pcTitle(ctx, view, str, y, color = COLORS.yellow, size = 38) {
+  const r = wrapText(ctx, str, size, textMaxW(view));
+  const lh = r.size * 1.15;
+  r.lines.forEach((l, i) => {
+    const ly = y + i * lh;
+    ctx.save(); ctx.globalAlpha = 140 / 255;
+    text(ctx, l, view.w / 2 + 2, ly + 2, { size: r.size, color: "#000", shadow: false });
+    ctx.restore();
+    text(ctx, l, view.w / 2, ly, { size: r.size, color, shadow: false });
+  });
+  return r.lines.length * lh;
 }
 
 export function koBanner(ctx, view, kind, t = 0) {
   if (kind === "draw") { centerText(ctx, view, "EMPATE", COLORS.yellow); return; }
   if (kind === "ko") {
-    const s = 1 + Math.max(0, 0.4 - t) * 1.5;
     ctx.save();
     ctx.translate(view.w / 2, C.BASE_H / 2);
-    ctx.scale(s, s);
     if (IMG.ko_banner) ctx.drawImage(IMG.ko_banner, -240, -82, 480, 165);
-    else text(ctx, "K.O.", 0, 0, { size: 120, color: COLORS.red, stroke: 12, strokeColor: "#200" });
+    else text(ctx, "K.O.", 0, 0, { size: 64, color: COLORS.red, shadow: false });
     ctx.restore();
     return;
   }
@@ -257,6 +296,7 @@ export function overlay(ctx, view, alpha = 0.65) {
 // Lista vertical de opciones. Devuelve nada; registra zonas tocables
 // que llaman onPick(i) (un toque sobre la opción la elige directo).
 export function menuList(ctx, view, items, index, centerY, onPick, o = {}) {
+  if (menuOpts.touch) return menuListTouch(ctx, view, items, index, centerY, onPick, o);
   const size = o.size ?? 28;
   const gap = o.gap ?? 50;
   const top = centerY - ((items.length - 1) * gap) / 2;
@@ -275,6 +315,28 @@ export function menuList(ctx, view, items, index, centerY, onPick, o = {}) {
     const disabled = o.disabled && o.disabled[i];
     text(ctx, label, view.w / 2, y, { size, color: disabled ? "#666" : sel ? COLORS.yellow : COLORS.white });
     if (onPick) addHit({ x: view.w / 2 - w / 2, y: y - gap / 2, w, h: gap }, () => onPick(i));
+  });
+}
+
+function menuListTouch(ctx, view, items, index, centerY, onPick, o = {}) {
+  const size = o.size ?? 25;
+  const rowH = 46;
+  const gap = Math.min(64, Math.max(rowH + 8, 380 / Math.max(1, items.length)));
+  let top = centerY - ((items.length - 1) * gap) / 2;
+  top = Math.max(top, 40 + rowH / 2);
+  const w = Math.min(view.w - 60, Math.max(340, ...items.map((l) => measure(ctx, l, size) + 70)));
+  items.forEach((label, i) => {
+    const y = top + i * gap;
+    const sel = i === index;
+    const disabled = o.disabled && o.disabled[i];
+    roundRect(ctx, view.w / 2 - w / 2, y - rowH / 2, w, rowH, rowH / 2);
+    ctx.fillStyle = "rgba(0,0,0,0.62)";
+    ctx.fill();
+    ctx.lineWidth = 2;
+    ctx.strokeStyle = sel ? COLORS.yellow : "rgba(255,255,255,0.38)";
+    ctx.stroke();
+    text(ctx, label, view.w / 2, y + 1, { size, color: disabled ? "#666" : sel ? COLORS.yellow : COLORS.white });
+    if (onPick) addHit({ x: view.w / 2 - w / 2 - 6, y: y - gap / 2, w: w + 12, h: gap }, () => onPick(i));
   });
 }
 
@@ -308,6 +370,14 @@ export function pillButton(ctx, cx, cy, label, onTap, o = {}) {
   const r = { x: cx - w / 2, y: cy - h / 2, w, h };
   if (onTap) addHit(r, onTap);
   return r;
+}
+
+// Botón "volver" de todas las pantallas: mismo tamaño y lugar (arriba a la
+// izquierda) que en los menús 1 Jugador / Multijugador.
+export function backButton(ctx, onTap, label = "◄ VOLVER", y = 36) {
+  // siempre arrancando del mismo borde izquierdo, aunque el texto sea más largo
+  const w = Math.max(110, measure(ctx, label, 15) + 44);
+  return pillButton(ctx, 25 + w / 2, y, label, onTap, { size: 15, h: 36, minW: 110, color: "#3c3c48" });
 }
 
 export function roundButton(ctx, cx, cy, r, label, onTap) {

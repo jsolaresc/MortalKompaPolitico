@@ -8,7 +8,7 @@
 // =====================================================================
 
 // Subila en cada entrega: V.0.1, V.0.2 ... hasta V.1.0
-export const GAME_VERSION = "V.0.5";
+export const GAME_VERSION = "V.0.6";
 export const GAME_TITLE = "Mortal Kompa Político";
 
 export const BASE_W = 960;          // ancho de la "ventana de pelea" (16:9)
@@ -28,13 +28,15 @@ export const ROUND_TIME = 60;        // segundos por round
 export const ROUNDS_TO_WIN = 2;      // al mejor de 3
 
 export const SPECIAL_HITS_REQUIRED = 5;   // golpes RECIBIDOS para habilitar el especial
-export const SPECIAL_DAMAGE_MULT = 1.10;   // (solo personajes con especial cuerpo a cuerpo)
+export const SPECIAL_DAMAGE_MULT = 1.0;   // (solo personajes con especial cuerpo a cuerpo)
 // Especial "externo" (invocación: león, ola, satélite...): fracción de la
 // vida MÁXIMA del rival que saca, y cuánto si se está cubriendo.
 export const SPECIAL_SUMMON_DAMAGE = 0.17;
 export const SPECIAL_SUMMON_BLOCKED = 0.04;
 export const CRITICAL_HIT_CHANCE = 0.02;  // solo puño/patada
-export const CRITICAL_HIT_MULT = 1.30;
+export const CRITICAL_HIT_MULT = 2.0;    // crítico = doble daño
+// daño que recibe el que BLOQUEA, según el ataque
+export const BLOCK_DAMAGE = { punch: 0.5, kick: 0.5, special: 2, ranged: 0.1, ranged_crouch: 0.1 };
 export const SOUND_RANDOM_CHANCE = 0.10;
 export const VOICE_LINE_CHANCE = 0.05;
 

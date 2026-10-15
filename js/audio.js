@@ -33,9 +33,11 @@ class AudioManager {
     this.active = new Set();      // fuentes sonando (para cortarlas)
     this.loops = new Map();       // id -> source
     this.loopSeq = 0;
-    this.volumes = { music: 0.5, sfx: 0.9, announcer: 1.0 };
+    this.volumes = { music: 0.5, stage: 0.5, sfx: 0.9, announcer: 1.0 };
     this.music = new Audio();
     this.music.preload = "auto";
+    this.onMusicEnded = null;     // lo usa la música de menú para pasar al siguiente tema
+    this.music.addEventListener("ended", () => { if (this.onMusicEnded) this.onMusicEnded(this.musicPath); });
     this.musicPath = null;
     this.musicBaseVolume = 0.5;
     this.listeners = [];          // para replicar sonidos por red
@@ -44,7 +46,12 @@ class AudioManager {
 
   setVolumes(v) {
     Object.assign(this.volumes, v);
-    this.music.volume = Math.min(1, this.musicBaseVolume * this.volumes.music * 2);
+    this.music.volume = Math.min(1, this.musicBaseVolume * this.musicVolumeFactor() * 2);
+  }
+
+  // menú -> "Música"; escenario (pelea) -> "Escenario"
+  musicVolumeFactor(cat = this.musicCategory) {
+    return cat === "stage" ? (this.volumes.stage ?? this.volumes.music) : this.volumes.music;
   }
 
   unlock() {
@@ -57,6 +64,7 @@ class AudioManager {
       this.preload();
     }
     if (this.ctx.state === "suspended") this.ctx.resume();
+    if (this.musicPath && this.music.paused && !this.music.ended) this.music.play().catch(() => {});
   }
 
   preload() {
@@ -93,7 +101,10 @@ class AudioManager {
     } else if (buf === undefined || buf instanceof Promise) {
       const t0 = performance.now();
       this.load(path).then((b) => {
-        if (b && performance.now() - t0 < 400) this._start(b, volume, category);
+        // un efecto que llega tarde ya no tiene sentido, pero el nombre del
+        // luchador sí (en el celular bajarlo puede tardar más de 0,4 s)
+        const wait = category === "announcer" ? 3000 : 400;
+        if (b && performance.now() - t0 < wait) this._start(b, volume, category);
       });
     }
   }
@@ -160,8 +171,9 @@ class AudioManager {
   // ---------------------------------------------------------------
   // Música (streaming con <audio>, no se decodifica entera)
   // ---------------------------------------------------------------
-  playMusic(path, { loop = true, volume = 0.5 } = {}, _remote = false) {
-    if (!_remote) this.emit({ t: "music", p: path, l: loop, v: volume });
+  playMusic(path, { loop = true, volume = 0.5, category = "menu" } = {}, _remote = false) {
+    if (!_remote) this.emit({ t: "music", p: path, l: loop, v: volume, c: category });
+    this.musicCategory = category;
     if (this.muted && !_remote) return;
     if (!path) { this.stopMusic(true); return; }
     this.musicBaseVolume = volume;
@@ -169,7 +181,7 @@ class AudioManager {
     this.musicPath = path;
     this.music.src = url(path);
     this.music.loop = loop;
-    this.music.volume = Math.min(1, volume * this.volumes.music * 2);
+    this.music.volume = Math.min(1, volume * this.musicVolumeFactor(category) * 2);
     this.music.play().catch(() => {});
   }
 
@@ -179,7 +191,7 @@ class AudioManager {
     this.musicPath = null;
   }
 
-  isMusicPlaying() { return !!this.musicPath && !this.music.paused; }
+  isMusicPlaying() { return !!this.musicPath && !this.music.paused && !this.music.ended; }
   pauseMusic() { this.music.pause(); }
   resumeMusic() { if (this.musicPath) this.music.play().catch(() => {}); }
 
@@ -190,7 +202,7 @@ class AudioManager {
       case "loop": this.playLoop(ev.p, ev.v, true, "r" + ev.id); break;
       case "unloop": this.stopLoop("r" + ev.id, true); break;
       case "stopall": this.stopAllSfx(true); break;
-      case "music": if (ev.p) this.playMusic(ev.p, { loop: ev.l, volume: ev.v }, true); else this.stopMusic(true); break;
+      case "music": if (ev.p) this.playMusic(ev.p, { loop: ev.l, volume: ev.v, category: ev.c || "menu" }, true); else this.stopMusic(true); break;
       default: break;
     }
   }

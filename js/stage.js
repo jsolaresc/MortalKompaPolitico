@@ -75,8 +75,12 @@ export class Stage {
       ctx.drawImage(m, left * kx, 0, viewW * kx, this.srcH, 0, 0, viewW, C.BASE_H);
     } else {
       // pantalla más ancha que el escenario (celular 20:9 con escenario
-      // 16:9): se estira a lo ancho para no dejar franjas negras
-      ctx.drawImage(m, 0, 0, this.srcW, this.srcH, 0, 0, viewW, C.BASE_H);
+      // 16:9): se agranda SIN deformar hasta cubrir el ancho y se recorta
+      // lo que sobra de alto -- más de arriba que de abajo, para no perder
+      // el piso (mismo criterio que la versión Android)
+      const visH = this.srcW * C.BASE_H / viewW;      // alto de la fuente que entra en pantalla
+      const sy = Math.max(0, (this.srcH - visH) * 0.7);
+      ctx.drawImage(m, 0, sy, this.srcW, visH, 0, 0, viewW, C.BASE_H);
     }
     void ky;
   }

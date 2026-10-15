@@ -8,13 +8,44 @@ import { audio } from "../audio.js";
 import { DB } from "../assets.js";
 import { ok, DEFAULT_KEYS, prettyKey, keyboard, keyLabel, PAD_LABELS, gamepads } from "../input.js";
 import * as Flow from "../flow.js";
+import { canOfferInstall, IS_IOS, APK_URL, IS_APP, BRIDGE, isStandalone, latestApk, appBuild } from "../platform.js";
+
+// Como en la versión de PC: los temas de menú NO se repiten en loop;
+// cuando termina uno arranca otro al azar (distinto del anterior).
+function randomTrack(list, exclude) {
+  const pool = list.length > 1 ? list.filter((p) => p !== exclude) : list;
+  return pool[Math.floor(Math.random() * pool.length)];
+}
 
 export function playMenuMusic() {
   if (audio.isMusicPlaying() && audio.musicCategory === "menu") return;
   const list = DB.menuMusic;
   if (!list.length) { audio.stopMusic(); return; }
-  audio.playMusic(list[Math.floor(Math.random() * list.length)], { loop: true, volume: 0.5 });
+  audio.playMusic(randomTrack(list, audio.musicPath), { loop: false, volume: 0.5 });
   audio.musicCategory = "menu";
+}
+
+audio.onMusicEnded = (path) => {
+  if (audio.musicCategory !== "menu" || !DB.menuMusic.length) return;
+  audio.musicPath = null;
+  audio.playMusic(randomTrack(DB.menuMusic, path), { loop: false, volume: 0.5 });
+  audio.musicCategory = "menu";
+};
+
+// Vocecitas random de menú (assets/sounds/menu_voices): cada 25 s hay
+// 15% de chance de que suene una, nunca la misma dos veces seguidas.
+// Solo mientras suena música de menú (igual que en PC).
+const MENU_VOICE_INTERVAL = 25, MENU_VOICE_CHANCE = 0.15;
+let menuVoiceTimer = MENU_VOICE_INTERVAL, lastMenuVoice = null;
+export function tickMenuVoices(dt) {
+  if (audio.musicCategory !== "menu" || !DB.menuVoices.length || audio.muted) return;
+  menuVoiceTimer -= dt;
+  if (menuVoiceTimer > 0) return;
+  menuVoiceTimer = MENU_VOICE_INTERVAL;
+  if (Math.random() < MENU_VOICE_CHANCE) {
+    lastMenuVoice = randomTrack(DB.menuVoices, lastMenuVoice);
+    audio.play(lastMenuVoice, 1, "sfx", true);  // local: cada celular las suyas (no se mandan por red)
+  }
 }
 
 // ---------------------------------------------------------------------
@@ -53,10 +84,51 @@ export class ListMenu {
     const cy = this.centerY ?? (this.showLogo ? 360 : 280);
     UI.menuList(ctx, view, this.items.map((i) => i.label), this.index, cy, (i) => this.pick(i),
       { disabled: this.items.map((i) => i.disabled) });
-    if (this.onBack) UI.pillButton(ctx, 80, 36, "◄ VOLVER", () => this.onBack(), { size: 15, h: 36, minW: 110, color: "#3c3c48" });
+    if (this.onBack) UI.backButton(ctx, () => this.onBack());
     fullscreenButton(this.app, ctx, view);
+    if (this.showLogo) {
+      installButton(this.app, ctx, view);
+      UI.text(ctx, GAME_VERSION, 46, C.BASE_H - 18, { size: 14, align: "left", color: "#aaa" });   // versión abajo a la izquierda, como en PC
+    }
     UI.footer(ctx, view, this.footerText ?? footerHelp(this.app, !!this.onBack));
   }
+}
+
+let updateBusy = false;
+export function installButton(app, ctx, view) {
+  // en la app: buscar y bajar la versión nueva
+  if (IS_APP) {
+    UI.pillButton(ctx, view.w - 110, 76, "⟳ ACTUALIZAR", () => checkUpdate(app), { size: 13, h: 32, minW: 190, color: "#3c78c8" });
+    return;
+  }
+  if (!canOfferInstall(app.isTouchDevice)) return;
+  UI.pillButton(ctx, view.w - 110, 76, "⬇ INSTALAR", async () => {
+    if (IS_IOS) { document.getElementById("install-ios").classList.remove("hidden"); return; }
+    // Android: baja el APK con la versión en el nombre (MortalKompaPolitico_v0_06_22.apk)
+    let url = APK_URL;
+    try { url = (await latestApk()).url; } catch (e) { /* nombre fijo */ }
+    window.location.href = url;
+  }, { size: 13, h: 32, minW: 190, color: "#3ca05a" });
+}
+
+async function checkUpdate(app) {
+  if (updateBusy) return;
+  updateBusy = true;
+  app.toast("Buscando actualizaciones...", 2);
+  try {
+    const last = await latestApk();
+    if (!last.build || last.build <= appBuild(GAME_VERSION)) {
+      app.toast(`Ya tenés la última versión (${GAME_VERSION})`, 4);
+    } else if (BRIDGE && BRIDGE.update) {
+      BRIDGE.update(last.url, last.name);
+      app.toast(`Descargando la versión ${last.version}... (se instala al terminar)`, 6);
+    } else {
+      window.location.href = last.url;
+    }
+  } catch (e) {
+    app.toast("No se pudo buscar la actualización. Revisá tu internet.", 4);
+  }
+  updateBusy = false;
 }
 
 export function fullscreenButton(app, ctx, view) {
@@ -65,7 +137,7 @@ export function fullscreenButton(app, ctx, view) {
 }
 
 export function footerHelp(app, back = true) {
-  if (app.touchVisible() || (app.isTouchDevice && !gamepads.list.length)) return "Tocá una opción";
+  if (app.touchVisible() || (app.isTouchDevice && !gamepads.list.length)) return "";
   if (gamepads.list.length && gamepads.lastUsed > keyboard.lastUsed) return back ? "[dpad] elegir    [cross] confirmar    [circle] volver" : "[dpad] elegir    [cross] confirmar";
   const s = app.settings;
   const parts = [`▲▼ elegir`, `${keyLabel(s, "confirm")} / ENTER confirmar`];
@@ -102,7 +174,7 @@ export class TitleScene {
         : (this.app.isTouchDevice ? "Tocá la pantalla para empezar" : "Apretá cualquier tecla para empezar");
       UI.text(ctx, msg, view.w / 2, 400, { size: 24, color: COLORS.white });
     }
-    UI.text(ctx, GAME_VERSION, 14, C.BASE_H - 16, { size: 14, align: "left", color: "#aaa" });
+    UI.text(ctx, GAME_VERSION, 46, C.BASE_H - 18, { size: 14, align: "left", color: "#aaa" });
     fullscreenButton(this.app, ctx, view);
   }
 }
@@ -130,7 +202,7 @@ export class DifficultyScene {
     UI.roundButton(ctx, cx - 150, cy, 34, "−", () => { this.level = Math.max(1, this.level - 1); });
     UI.roundButton(ctx, cx + 150, cy, 34, "+", () => { this.level = Math.min(10, this.level + 1); });
     UI.pillButton(ctx, cx, cy + 150, "ELEGIR", () => this.onDone(this.level), { minW: 180 });
-    UI.pillButton(ctx, 80, 40, "◄ VOLVER", () => this.onBack(), { size: 15, h: 36, minW: 110, color: "#3c3c48" });
+    UI.backButton(ctx, () => this.onBack());
     UI.footer(ctx, view, "◄ ► cambiar   ·   confirmar para elegir");
   }
 }
@@ -146,81 +218,142 @@ export class TournamentSizeScene {
     else if (i.justPressed("cancel")) this.onBack();
   }
   draw(ctx, view) {
-    UI.menuBackground(ctx, view, this.app.t);
-    UI.title(ctx, view, "TORNEO: ¿CUÁNTOS LUCHADORES?", 120);
-    const cx = view.w / 2, cy = 260;
-    UI.text(ctx, String(this.count), cx, cy, { size: 96, color: COLORS.yellow, stroke: 8 });
-    UI.text(ctx, "Se eligen de a uno (se pueden repetir). Las peleas las juegan J1 y J2.", cx, cy + 75, { size: 17 });
-    UI.roundButton(ctx, cx - 150, cy, 34, "−", () => { this.count = Math.max(3, this.count - 1); });
-    UI.roundButton(ctx, cx + 150, cy, 34, "+", () => { this.count = Math.min(16, this.count + 1); });
-    UI.pillButton(ctx, cx, cy + 150, "ELEGIR", () => this.onDone(this.count), { minW: 180 });
-    UI.pillButton(ctx, 80, 40, "◄ VOLVER", () => this.onBack(), { size: 15, h: 36, minW: 110, color: "#3c3c48" });
+    ctx.fillStyle = COLORS.dark; ctx.fillRect(0, 0, view.w, C.BASE_H);
+    const cx = view.w / 2, cy = C.BASE_H / 2;
+    UI.text(ctx, "¿CUÁNTOS JUGADORES?", cx, cy - 90, { size: 20, shadow: false });
+    UI.text(ctx, String(this.count), cx, cy, { size: 64, color: COLORS.yellow, shadow: false });
+    if (this.app.isTouchDevice) {
+      UI.roundButton(ctx, cx - 130, cy, 28, "−", () => { this.count = Math.max(3, this.count - 1); });
+      UI.roundButton(ctx, cx + 130, cy, 28, "+", () => { this.count = Math.min(16, this.count + 1); });
+      UI.pillButton(ctx, cx, cy + 130, "ELEGIR", () => this.onDone(this.count), { minW: 180 });
+      UI.backButton(ctx, () => this.onBack());
+    }
+    UI.footer(ctx, view, this.app.isTouchDevice ? "" : "A/D cambiar · Puño o ENTER confirma · Patada o ESC vuelve", C.BASE_H - 40);
   }
 }
 
 // ---------------------------------------------------------------------
 // Opciones
 // ---------------------------------------------------------------------
-export class OptionsScene {
-  constructor(app, { onBack }) {
-    this.app = app; this.onBack = onBack; this.index = 0;
-  }
-  rows() {
-    const s = this.app.settings;
-    const pct = (v) => `${Math.round(v * 10)}`;
-    const touchL = { auto: "Automático", on: "Siempre", off: "Nunca" };
-    return [
-      { label: `Música: ${pct(s.volumes.music)}`, adj: (d) => { s.volumes.music = clamp01(s.volumes.music + d * 0.1); } },
-      { label: `Efectos: ${pct(s.volumes.sfx)}`, adj: (d) => { s.volumes.sfx = clamp01(s.volumes.sfx + d * 0.1); audio.playSfx("hit_impact", 1); } },
-      { label: `Locutor: ${pct(s.volumes.announcer)}`, adj: (d) => { s.volumes.announcer = clamp01(s.volumes.announcer + d * 0.1); audio.playAnnouncer("fight"); } },
-      { label: `Pantalla completa: ${document.fullscreenElement ? "Sí" : "No"}`, act: () => this.app.toggleFullscreen() },
-      { label: `Controles táctiles: ${touchL[s.touchControls || "auto"]}`, adj: (d) => {
-        const order = ["auto", "on", "off"];
-        s.touchControls = order[(order.indexOf(s.touchControls || "auto") + (d > 0 ? 1 : 2)) % 3];
-      } },
-      { label: `Tamaño botones táctiles: ${s.touchScale || 100}%`, adj: (d) => {
-        s.touchScale = Math.max(70, Math.min(140, (s.touchScale || 100) + d * 10));
-        this.app.relayout();
-      } },
-      { label: "Controles (teclado / joystick)", act: () => this.app.setScene(new ControlsScene(this.app, { onBack: () => this.app.setScene(this) })) },
-      { label: "Volver", act: () => this.back() },
-    ];
-  }
+// ---------------------------------------------------------------------
+// Opciones (como en la versión de PC): Sonido > ... · Pantalla completa
+// (se cambia acá mismo) · Controles > ...
+// Lista genérica de filas: { label, adj(d) | act(), disabled }
+// ---------------------------------------------------------------------
+class RowsScene {
+  constructor(app, { title, onBack }) { this.app = app; this.title = title; this.onBack = onBack; this.index = 0; }
+  rows() { return []; }
   back() { this.app.saveSettings(); this.onBack(); }
+  move(rows, d) {
+    const n = rows.length;
+    for (let k = 1; k <= n; k++) {
+      const j = (((this.index + d * k) % n) + n) % n;
+      if (!rows[j].disabled) { this.index = j; return; }
+    }
+  }
+  run(r, d = 1) {
+    if (!r || r.disabled) return;
+    if (r.act) r.act(); else if (r.adj) { r.adj(d); this.app.saveSettings(); }
+  }
   update() {
     const i = this.app.anyInput;
     const rows = this.rows();
-    if (i.justPressed("up")) this.index = (this.index - 1 + rows.length) % rows.length;
-    else if (i.justPressed("down")) this.index = (this.index + 1) % rows.length;
-    else if (i.justPressed("left") && rows[this.index].adj) { rows[this.index].adj(-1); this.app.saveSettings(); }
-    else if (i.justPressed("right") && rows[this.index].adj) { rows[this.index].adj(1); this.app.saveSettings(); }
-    else if (ok(i)) { const r = rows[this.index]; if (r.act) r.act(); else if (r.adj) { r.adj(1); this.app.saveSettings(); } }
+    if (rows[this.index] && rows[this.index].disabled) this.move(rows, 1);
+    if (i.justPressed("up")) this.move(rows, -1);
+    else if (i.justPressed("down")) this.move(rows, 1);
+    else if (i.justPressed("left") && rows[this.index].adj) this.run(rows[this.index], -1);
+    else if (i.justPressed("right") && rows[this.index].adj) this.run(rows[this.index], 1);
+    else if (ok(i)) this.run(rows[this.index], 1);
     else if (i.justPressed("cancel")) this.back();
   }
   draw(ctx, view) {
     UI.menuBackground(ctx, view, this.app.t);
-    UI.title(ctx, view, "OPCIONES", 50);
+    UI.title(ctx, view, this.title, 70);
     const rows = this.rows();
-    const gap = 48, top = 110;
+    const touch = UI.menuOpts.touch;
+    const gap = touch ? 62 : 52;
+    const top = 280 - ((rows.length - 1) * gap) / 2;
     rows.forEach((r, k) => {
       const y = top + k * gap;
-      const sel = k === this.index;
-      if (sel) {
-        UI.roundRect(ctx, view.w / 2 - 260, y - 20, 520, 40, 10);
+      const sel = k === this.index && !r.disabled;
+      const col = r.disabled ? "#666" : sel ? COLORS.yellow : COLORS.white;
+      if (touch) {
+        UI.roundRect(ctx, view.w / 2 - 210, y - 23, 420, 46, 23);
+        ctx.fillStyle = "rgba(0,0,0,0.62)"; ctx.fill();
+        ctx.strokeStyle = sel ? COLORS.yellow : r.disabled ? "rgba(255,255,255,0.15)" : "rgba(255,255,255,0.38)"; ctx.lineWidth = 2; ctx.stroke();
+      } else if (sel) {
+        UI.roundRect(ctx, view.w / 2 - 260, y - 22, 520, 44, 10);
         ctx.fillStyle = "rgba(240,200,40,0.14)"; ctx.fill();
         ctx.strokeStyle = COLORS.yellow; ctx.lineWidth = 2; ctx.stroke();
       }
-      UI.text(ctx, r.label, view.w / 2, y, { size: 22, color: sel ? COLORS.yellow : COLORS.white });
-      UI.addHit({ x: view.w / 2 - 200, y: y - 22, w: 400, h: 44 }, () => {
+      UI.text(ctx, r.label, view.w / 2, y, { size: touch ? 22 : 24, color: col });
+      UI.addHit({ x: view.w / 2 - 210, y: y - gap / 2, w: 420, h: gap }, () => {
+        if (r.disabled) return;
         this.index = k;
-        if (r.act) r.act(); else if (r.adj) { r.adj(1); this.app.saveSettings(); }
+        this.run(r, 1);
       });
       if (r.adj) {
-        UI.roundButton(ctx, view.w / 2 - 230, y, 16, "−", () => { this.index = k; r.adj(-1); this.app.saveSettings(); });
-        UI.roundButton(ctx, view.w / 2 + 230, y, 16, "+", () => { this.index = k; r.adj(1); this.app.saveSettings(); });
+        const br = touch ? 21 : 16, bx = touch ? 240 : 232;
+        if (!r.disabled) {
+          UI.roundButton(ctx, view.w / 2 - bx, y, br, "−", () => { this.index = k; this.run(r, -1); });
+          UI.roundButton(ctx, view.w / 2 + bx, y, br, "+", () => { this.index = k; this.run(r, 1); });
+        }
       }
     });
-    UI.footer(ctx, view, "▲▼ elegir   ·   ◄ ► ajustar   ·   volver para guardar");
+    UI.backButton(ctx, () => this.back());
+    if (!touch) UI.footer(ctx, view, "▲▼ elegir   ·   ◄ ► ajustar   ·   ESC volver");
+  }
+}
+
+const pct = (v) => `${Math.round((v ?? 0) * 100)}%`;
+
+export class OptionsScene extends RowsScene {
+  constructor(app, { onBack }) { super(app, { title: "OPCIONES", onBack }); }
+  rows() {
+    return [
+      { label: "Sonido", act: () => this.app.setScene(new SoundOptionsScene(this.app, { onBack: () => this.app.setScene(this) })) },
+      { label: `Pantalla completa: ${(IS_APP || isStandalone() || document.fullscreenElement) ? "Sí" : "No"}`, act: () => { if (!IS_APP && !isStandalone()) this.app.toggleFullscreen(); },
+        disabled: !document.fullscreenEnabled && !document.fullscreenElement },
+      { label: "Controles", act: () => this.app.setScene(new ControlOptionsScene(this.app, { onBack: () => this.app.setScene(this) })) },
+    ];
+  }
+}
+
+class SoundOptionsScene extends RowsScene {
+  constructor(app, { onBack }) { super(app, { title: "SONIDO", onBack }); }
+  rows() {
+    const v = this.app.settings.volumes;
+    const step = (k, d) => { v[k] = clamp01(v[k] + d * 0.1); audio.setVolumes(v); };
+    return [
+      { label: `Música: ${pct(v.music)}`, adj: (d) => step("music", d) },
+      { label: `Efectos: ${pct(v.sfx)}`, adj: (d) => { step("sfx", d); audio.playSfx("hit_impact", 1); } },
+      { label: `Escenario: ${pct(v.stage)}`, adj: (d) => step("stage", d) },
+      { label: `Locutor: ${pct(v.announcer)}`, adj: (d) => { step("announcer", d); audio.playAnnouncer("fight"); } },
+    ];
+  }
+}
+
+class ControlOptionsScene extends RowsScene {
+  constructor(app, { onBack }) { super(app, { title: "CONTROLES", onBack }); }
+  rows() {
+    const s = this.app.settings;
+    const touchL = { auto: "Automático", on: "Siempre", off: "Nunca" };
+    const touchOff = (s.touchControls || "auto") === "off";
+    // teclado/joystick: hace falta algo conectado (en la PC siempre hay teclado)
+    const hasPads = gamepads.list.length > 0;
+    const kbdOk = !this.app.isTouchDevice || hasPads || !!keyboard.lastUsed;
+    return [
+      { label: `Botones táctiles: ${touchL[s.touchControls || "auto"]}`, adj: (d) => {
+        const order = ["auto", "on", "off"];
+        s.touchControls = order[(order.indexOf(s.touchControls || "auto") + (d > 0 ? 1 : 2)) % 3];
+      } },
+      { label: `Tamaño botones táctiles: ${s.touchScale || 100}%`, disabled: touchOff, adj: (d) => {
+        s.touchScale = Math.max(70, Math.min(140, (s.touchScale || 100) + d * 10));
+        this.app.relayout();
+      } },
+      { label: "Teclado / Joystick", disabled: !kbdOk,
+        act: () => this.app.setScene(new ControlsScene(this.app, { onBack: () => this.app.setScene(this) })) },
+    ];
   }
 }
 function clamp01(v) { return Math.max(0, Math.min(1, Math.round(v * 10) / 10)); }

@@ -8,7 +8,7 @@ import { PlayerInput, CombinedInput, pollGamepads, endKeyboardFrame, gamepads, k
 import { TouchControls, IS_TOUCH_DEVICE } from "./touch.js";
 import * as UI from "./ui.js";
 import { loadSettings, saveSettings } from "./settings.js";
-import { TitleScene } from "./scenes/menus.js";
+import { tickMenuVoices } from "./scenes/menus.js";
 
 const canvas = document.getElementById("game");
 const ctx = canvas.getContext("2d");
@@ -23,7 +23,7 @@ export const app = {
   touch: new TouchControls(),
   inputs: [],
   isTouchDevice: IS_TOUCH_DEVICE,
-  inviteRoom: new URLSearchParams(location.search).get("sala"),
+  inviteRoom: (new URLSearchParams(location.search).get("sala") || "").trim().toLowerCase() || null,
   lastTouchAt: 0,
 };
 
@@ -183,9 +183,11 @@ function frame(now) {
     pollGamepads();
     app.touch.visible = app.touchVisible();
     UI.hudOpts.showSpecialPips = !app.touch.visible;
+    UI.menuOpts.touch = app.isTouchDevice;
     for (const i of app.inputs) i.poll();
     if (app.scene && app.scene.update) app.scene.update(C.DT);
     if (app.net && app.net.tick) app.net.tick(C.DT);
+    if (!(app.scene && (app.scene.match || app.scene.mode === "fight" || app.scene.mode === "loading"))) tickMenuVoices(C.DT);
     endKeyboardFrame();
     app.touch.endFrame();
     app.t += C.DT;
@@ -243,10 +245,26 @@ async function boot() {
     console.error(e);
     return;
   }
-  app.setScene(new TitleScene(app));
+  // directo al menú principal (o a la sala, si se entró con un link de
+  // invitación). El sonido se habilita con el primer toque/tecla (los
+  // navegadores no dejan antes): ver audio.unlock().
+  const Flow = await import("./flow.js");
+  if (app.inviteRoom) Flow.joinOnline(app, app.inviteRoom);
+  else Flow.mainMenu(app);
   requestAnimationFrame(frame);
 }
 
 window.__app = app; // para pruebas desde la consola
+
+// App Android: el botón "atrás" del celular hace de ESC; en la pantalla de
+// inicio / menú principal cierra la app.
+window.__androidBack = () => {
+  const sc = app.scene;
+  const atRoot = sc && sc.constructor.name === "ListMenu" && !sc.onBack;
+  if (atRoot && window.MKAndroid) { window.MKAndroid.exit(); return; }
+  for (const type of ["keydown", "keyup"]) {
+    window.dispatchEvent(new KeyboardEvent(type, { key: "Escape", code: "Escape", bubbles: true }));
+  }
+};
 keyboard.listeners.push(() => audio.unlock());
 boot();

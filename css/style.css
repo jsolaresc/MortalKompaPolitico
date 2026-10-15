@@ -36,7 +36,7 @@ canvas#game {
   transform-origin: 0 0;
 }
 
-#share {
+#share, #join, #install-ios {
   position: absolute;
   right: 3%;
   top: 16%;
@@ -53,9 +53,13 @@ canvas#game {
   -webkit-user-select: text;
   touch-action: auto;
 }
+#join { left: 50%; right: auto; top: 30%; transform: translateX(-50%); width: min(80%, 460px); }
+#install-ios { left: 50%; right: auto; top: 12%; transform: translateX(-50%); width: min(86%, 480px); font-family: system-ui, sans-serif; font-weight: 600; line-height: 1.4; }
+#install-ios .title { font-family: 'Roboto Black', sans-serif; font-size: 20px; color: #f0c828; margin-bottom: 6px; }
+#install-ios ol { padding-left: 20px; margin: 6px 0 10px; }
 #share .row { display: flex; flex-direction: column; gap: 4px; margin-bottom: 10px; }
 #share .label { margin-bottom: 4px; }
-#share input {
+#share input, #join input {
   font: inherit;
   font-family: system-ui, sans-serif;
   font-weight: 600;
@@ -67,8 +71,10 @@ canvas#game {
   width: 100%;
   box-sizing: border-box;
 }
-#share .buttons { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 10px; }
-#share button, #share .btn {
+#join .buttons, #install-ios .buttons { display: flex; gap: 8px; margin-top: 10px; }
+#join .label { margin-bottom: 6px; }
+#share .buttons { display: flex; flex-wrap: nowrap; gap: 8px; margin-top: 10px; }
+#share button, #share .btn, #join button, #install-ios button {
   font: inherit;
   font-size: 14px;
   padding: 9px 12px;
@@ -81,13 +87,17 @@ canvas#game {
   flex: 1 1 auto;
   text-align: center;
 }
-#share .wa { background: #1fa855; }
-#share .mail { background: #3a6fd8; }
-#share #share-native { background: #8a4ad8; }
-#share .note { margin-top: 8px; font-size: 12px; color: #aab; font-family: system-ui, sans-serif; }
+#share button { flex: 1 1 0; }
+#share #share-native { background: #3a6fd8; }
 
 @media (max-height: 420px) {
   #share { top: 8%; padding: 10px 12px; font-size: 13px; }
   #share button, #share .btn { padding: 7px 10px; font-size: 13px; }
 }
 
+
+#join button { flex: 1 1 0; }
+#join button.secondary { background: #3c3c48; }
+#install-ios button { flex: 1 1 0; }
+
+#join #join-link { font-size: 22px; letter-spacing: 3px; text-align: center; text-transform: none; }

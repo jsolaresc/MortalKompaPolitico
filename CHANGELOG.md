@@ -1,5 +1,20 @@
 # Cambios
 
+## V.0.6
+- Se copió la versión navegador actualizada de Mortal Kompa (jugabilidad, menús y apps):
+  - Jugabilidad: golpe crítico = doble daño; daño fijo al cubrirse según el ataque (puño/patada
+    0,5 · distancia 0,1). Los especiales de Mortal Kompa Político siguen siendo invocaciones
+    (17% / 4% cubriéndose).
+  - Menús como la versión de PC/Android (selección de personaje, torre, torneo, opciones en
+    Sonido / Pantalla / Controles, volumen aparte para la música del escenario, títulos largos en
+    varios renglones, menús tipo "pastilla" en celular).
+  - Online: Crear sala / Unirse con código de 6 letras; 1 vs 1 o torneo según cuántos entren;
+    reconexión en el torneo con pausa esperando al que se fue; se aguantan cortes del servidor
+    de partidas.
+  - App Android (APK) con el mismo juego adentro: botones INSTALAR (web) y ACTUALIZAR (app),
+    "atrás" del celular, juego cruzado app ↔ página. iPhone: instrucciones para agregar el ícono.
+  - Ícono de app y vista previa para compartir de Mortal Kompa Político.
+
 ## V.0.5
 - Nuevos ataques especiales "externos": el luchador da una orden y aparece una invocación que
   ataca sola. 17% de daño (4% cubriéndose) y se pueden esquivar.

@@ -1,4 +1,4 @@
-# Mortal Kompa Político — V.0.5
+# Mortal Kompa Político — V.0.6
 
 Juego de pelea en el navegador, hermano de Mortal Kompa: misma jugabilidad,
 luchadores de la política argentina. No se instala: se juega desde una página
@@ -26,40 +26,25 @@ web (PC, celular o tablet).
 
 ## Modos
 - 1 Jugador: **Torre de Batalla** (todos contra todos, cada piso más difícil, jefe misterioso al final) y **Pelea contra CPU** (dificultad 1 a 10).
-- Multijugador: **2 Jugadores** y **Torneo** (3 a 16) en el mismo equipo.
-- **Online: invitar por link.** Se abre una sala y aparece el link: *Copiar link*,
-  *WhatsApp*, *Mail* o *Compartir…* (en el celular abre el menú de compartir).
-  Quien abre el link entra directo. En la sala elegís **Pelea 1 vs 1** (con el primero
-  que entró; el resto mira) o **Torneo** (todos los de la sala, cada uno elige su luchador
-  en su pantalla).
+- Multijugador → **Local**: 2 Jugadores y Torneo (3 a 16) en el mismo equipo.
+- Multijugador → **Online**:
+  - **Crear sala**: arriba aparece el código (ej. 4MUKC7) y el link para copiarlo o compartirlo
+    (WhatsApp, mail...). Quien lo abre entra directo a la sala, desde cualquier celular o PC.
+  - **Unirse**: escribiendo el código de 6 letras (o pegando el link).
+  - Con 1 invitado se pelea 1 vs 1; con 2 o más, torneo. Si alguien se desconecta en el torneo,
+    la pelea queda en pausa esperándolo (puede volver y recupera su lugar) o se le da por ganada al otro.
+  - **La app de Android y la página juegan juntas.**
 
-## Probarlo en tu PC
-Los navegadores no dejan abrir el juego con doble clic en `index.html`
-(bloquean la carga de archivos). Usá **`Jugar en mi PC.bat`** (necesita Python),
-o cualquier servidor local, y entrá a `http://localhost:8000`.
-
-Para probar el online en una sola PC sin internet: `http://localhost:8000/?net=local`,
-creá la sala y abrí el link de invitación en otra pestaña del mismo navegador.
-
-## Publicarlo en GitHub Pages
-1. Creá un repositorio (ej. `mortal-kompa-politico`) y subí **el contenido de esta carpeta**
-   (que `index.html` quede en la raíz del repo).
-2. En el repo: *Settings > Pages > Build and deployment* → *Deploy from a branch* →
-   rama `main`, carpeta `/ (root)`.
-3. En un par de minutos queda en `https://<tu-usuario>.github.io/mortal-kompa-politico/`.
-4. **Dominio propio** (ej. `mortalkompa.com`): en *Settings > Pages > Custom domain*
-   escribí el dominio; en tu proveedor del dominio creá los registros que te indica
-   GitHub (A a las IP de GitHub Pages, o CNAME a `<tu-usuario>.github.io`). Activá
-   *Enforce HTTPS* (el online necesita HTTPS).
-
-## Cómo funciona el online
-El que invita ("anfitrión") corre la pelea de verdad; los demás le mandan sus botones y
-reciben 60 veces por segundo lo que tienen que dibujar. Los navegadores se conectan
-directo entre sí (WebRTC). Para "presentarlos" se usa el servidor público gratuito de
-PeerJS (no hay servidor propio que mantener).
-- Si alguien no logra conectarse nunca (pasa en algunas redes de datos móviles muy
-  cerradas), hace falta agregar un servidor TURN en `js/config.js` (`ICE_SERVERS`).
-- El invitado siente un pequeño retraso en sus golpes (lo que tarda internet ida y vuelta).
+## Instalar (app)
+En el menú principal, desde el celular, aparece **INSTALAR**:
+- **Android:** baja el APK (la app es este mismo juego, en pantalla completa y con todo adentro).
+  Se instala encima de la anterior. Dentro de la app, el botón **ACTUALIZAR** busca la versión
+  nueva y la instala.
+- **iPhone:** explica cómo agregar el ícono (Safari > Compartir > Agregar a pantalla de inicio).
+- El APK se compila solo en GitHub (pestaña **Actions**, workflow *Build APK*) con cada cambio del
+  juego y se publica en **Releases** (`MortalKompaPolitico_v0_06_N.apk` y `MortalKompaPolitico.apk`).
+  La app es `android_app/` (un WebView que sirve los archivos del juego). Se firma con
+  `build_android/debug.keystore`: no la cambies o Android no deja actualizar encima.
 
 ## Cambiar los luchadores provisorios por los reales
 Los 9 políticos son **maniquíes provisorios** dibujados por código

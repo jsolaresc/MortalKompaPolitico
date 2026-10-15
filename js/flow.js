@@ -15,7 +15,7 @@ import { ListMenu, DifficultyScene, OptionsScene, TournamentSizeScene, playMenuM
 import { CharSelectScene, StageSelectScene } from "./scenes/select.js";
 import { startTower } from "./scenes/tower.js";
 import { startLocalTournament } from "./scenes/tournament.js";
-import { hostOnline, joinOnlineScene } from "./scenes/online.js";
+import { hostOnline, joinOnlineScene, showJoinPanel } from "./scenes/online.js";
 
 // ---------------------------------------------------------------------
 // Menús
@@ -38,7 +38,6 @@ export function onePlayerMenu(app, index = 0) {
     items: [
       { label: "Torre de Batalla", action: () => askDifficulty(app, "DIFICULTAD INICIAL DE LA TORRE", (lvl) => startTower(app, lvl), () => onePlayerMenu(app, 0)) },
       { label: "Pelea contra CPU", action: () => askDifficulty(app, "DIFICULTAD DE LA CPU", (lvl) => startCpuFight(app, lvl), () => onePlayerMenu(app, 1)) },
-      { label: "Volver", action: () => mainMenu(app, 0) },
     ],
   }));
 }
@@ -48,12 +47,34 @@ export function multiplayerMenu(app, index = 0) {
     title: "MULTIJUGADOR", index,
     onBack: () => mainMenu(app, 1),
     items: [
-      { label: "2 Jugadores (mismo equipo)", action: () => startVersusLocal(app) },
-      { label: "Torneo (mismo equipo)", action: () => app.setScene(new TournamentSizeScene(app, {
-        onDone: (n) => startLocalTournament(app, n), onBack: () => multiplayerMenu(app, 1),
+      { label: "Local", action: () => localMenu(app) },
+      { label: "Online", action: () => onlineMenu(app) },
+    ],
+  }));
+}
+
+// mismo equipo (teclado / joysticks / un celular)
+export function localMenu(app, index = 0) {
+  app.setScene(new ListMenu(app, {
+    title: "LOCAL", index,
+    onBack: () => multiplayerMenu(app, 0),
+    items: [
+      { label: "2 Jugadores", action: () => startVersusLocal(app) },
+      { label: "Torneo", action: () => app.setScene(new TournamentSizeScene(app, {
+        onDone: (n) => startLocalTournament(app, n), onBack: () => localMenu(app, 1),
       })) },
-      { label: "Online: invitar por link", action: () => hostOnline(app) },
-      { label: "Volver", action: () => mainMenu(app, 1) },
+    ],
+  }));
+}
+
+// por internet, invitando con un link
+export function onlineMenu(app, index = 0) {
+  app.setScene(new ListMenu(app, {
+    title: "ONLINE", index,
+    onBack: () => multiplayerMenu(app, 1),
+    items: [
+      { label: "Crear sala", action: () => hostOnline(app) },
+      { label: "Unirse", action: () => showJoinPanel(app, () => onlineMenu(app, 1)) },
     ],
   }));
 }
@@ -84,7 +105,7 @@ export async function prepareFight(app, slugs, stageDef) {
 }
 
 export function playStageMusic(stage) {
-  if (stage && stage.music) { audio.playMusic(stage.music, { loop: true, volume: 0.5 }); audio.musicCategory = "stage"; }
+  if (stage && stage.music) audio.playMusic(stage.music, { loop: true, volume: 0.5, category: "stage" });
   else if (DB.menuMusic.length && !audio.isMusicPlaying()) playMenuMusic();
 }
 
@@ -187,11 +208,18 @@ export class FightScene {
     const m = this.match;
     if (m.phase === "over") {
       const w = m.f[m.winner];
-      UI.text(ctx, `¡${w.name.toUpperCase()} GANA LA PELEA!`, view.w / 2, 150, { size: 40, color: COLORS.yellow, stroke: 7 });
+      const txt = `¡${w.name.toUpperCase()} GANA\u00a0LA\u00a0PELEA!`;
       if (this.showEnd) {
-        UI.overlay(ctx, view, 0.35);
-        UI.text(ctx, `¡${w.name.toUpperCase()} GANA LA PELEA!`, view.w / 2, 150, { size: 40, color: COLORS.yellow, stroke: 7 });
-        UI.menuList(ctx, view, this.endItems(), this.endIndex, 320, (k) => { if (m.phaseT > 0.4) this.endPick(k); });
+        // revancha: cuadro congelado + velo + título arriba + menú (igual que en PC)
+        UI.overlay(ctx, view, 140 / 255);
+        UI.pcTitle(ctx, view, txt, 70);
+        UI.menuList(ctx, view, this.endItems(), this.endIndex, C.BASE_H / 2 + 60, (k) => { if (m.phaseT > 0.4) this.endPick(k); });
+      } else {
+        // Torre / torneo: pantalla oscura con el ganador (igual que en PC)
+        ctx.fillStyle = COLORS.dark; ctx.fillRect(0, 0, view.w, C.BASE_H);
+        UI.centerText(ctx, view, txt, COLORS.yellow);
+        const msg = this.opts.overMessage ? this.opts.overMessage(m) : null;
+        if (msg) UI.text(ctx, msg, view.w / 2, C.BASE_H / 2 + 60, { size: 20, shadow: false });
       }
     }
     if (this.paused) {
@@ -228,12 +256,12 @@ async function launchLocal(app, { slugs, mystery, stageDef, inputs, onChangeChar
 export function startVersusLocal(app) {
   app.setScene(new CharSelectScene(app, {
     players: [{ input: app.inputs[0] }, { input: app.inputs[1] }],
-    onBack: () => multiplayerMenu(app, 0),
+    onBack: () => localMenu(app, 0),
     onDone: (picks) => app.setScene(new StageSelectScene(app, {
       input: app.inputs[0],
       onBack: () => startVersusLocal(app),
       onDone: (stageDef) => launchLocal(app, {
-        slugs: picks.map((p) => p.slug), mystery: picks.map((p) => p.random), stageDef,
+        slugs: picks.map((p) => p.slug), mystery: [false, false], stageDef,
         inputs: [app.inputs[0], app.inputs[1]], onChangeChars: () => startVersusLocal(app),
       }),
     })),
@@ -248,7 +276,7 @@ export function startCpuFight(app, level) {
       input: app.inputs[0],
       onBack: () => startCpuFight(app, level),
       onDone: (stageDef) => launchLocal(app, {
-        slugs: picks.map((p) => p.slug), mystery: picks.map((p) => p.random), stageDef,
+        slugs: picks.map((p) => p.slug), mystery: [false, false], stageDef,
         inputs: [app.inputs[0], new CPUInput(level)], onChangeChars: () => startCpuFight(app, level),
       }),
     })),
